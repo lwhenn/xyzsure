@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<style type="text/css">
+    /* ============ desktop view ============ */
+   body {
+        background: linear-gradient(135deg, #eef9f7 0%, #7ec8bc 100%);
+        min-height: 100vh;
+        background-attachment: fixed;
+    }
+
+    /* Ensure navbar dropdowns render above sticky tables */
+    .navbar { position: relative; z-index: 5000; }
+    .navbar .dropdown-menu { z-index: 6000; }
+
+    #warnings thead {
+        display: none;
+    }
+
+    .form-signin {
+        width: 100%;
+        max-width: 330px;
+        padding: 15px;
+        margin: auto;
+    }
+
+    /* ============ desktop view .end// ============ */
+
+    /* ============ small devices ============ */
+    @media (max-width: 991px) {
+
+        .dropdown-menu .dropdown-menu {
+            margin-left: 0.7rem;
+            margin-right: 0.7rem;
+            margin-bottom: .5rem;
+        }
+
+    }
+
+    /* ============ small devices .end// ============ */
+    
+</style>
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <script src="{{ url_for('static', filename='jquery/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='Popper/popper.min.js') }}"></script>
+    <link href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='bootstrap/js/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='Moment/moment.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='DataTables/datatables.min.css') }}">
+    <script src="{{ url_for('static', filename='DataTables/datatables.js') }}"></script>
+    <script src="{{ url_for('static', filename='Moment/moment.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='Custom/css/datatable-editor-modal-fix.css') }}">
+    <link href="{{ url_for('static', filename='Custom/css/bootstrap-float-label.css') }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='Moment/datatables.datetime-moment.js') }}"></script>
+    <!-- Load bootstrap-icons: use local static CSS when present, otherwise use CDN.
+         Rendering this decision server-side avoids a local 404 and prevents the
+         browser from attempting to access third-party storage when the CDN is used. -->
+    {% if has_bootstrap_icons %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap-icons/font/bootstrap-icons.css') }}">
+    {% else %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    {% endif %}
+
+    {% block content_links %}
+
+    {% endblock %}
+
+    <title>
+        {% block title %}
+
+        {% endblock %}
+    </title>
+    <!-- html2pdf for client-side PDF generation when exporting saved reports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+</head>
+
+<body>
+    {% if not (hide_navbar|default(False)) %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
+        <div class="container-fluid">
+
+            <a class="navbar-brand" href="{{ url_for('ai_compliance.home') }}">AI Compliance</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        {% if endpoint_exists('admin.ai_engine.ai_gap_analysis') %}
+                        <a class="nav-link" href="{{ url_for('admin.ai_engine.ai_gap_analysis') }}"><i class="bi bi-journal-medical"></i> Gap Analysis</a>
+                        {% else %}
+                        <a class="nav-link disabled" href="#" aria-disabled="true"><i class="bi bi-journal-medical"></i> Gap Analysis</a>
+                        {% endif %}
+                    </li>
+                    <li class="nav-item">
+                        {% if endpoint_exists('admin.ai_search_results') %}
+                        <a class="nav-link" href="{{ url_for('admin.ai_search_results') }}"><i class="bi bi-list-columns-reverse"></i> Search Results</a>
+                        {% else %}
+                        <a class="nav-link disabled" href="#" aria-disabled="true"><i class="bi bi-list-columns-reverse"></i> Search Results</a>
+                        {% endif %}
+                    </li>
+                    <li class="nav-item">
+                        {% if endpoint_exists('admin.ai_search_result_single') %}
+                        <a class="nav-link" href="{{ url_for('admin.ai_search_result_single') }}"><i class="bi bi-eye"></i> Result Viewer</a>
+                        {% else %}
+                        <a class="nav-link disabled" href="#" aria-disabled="true"><i class="bi bi-eye"></i> Result Viewer</a>
+                        {% endif %}
+                    </li>
+                    <li class="nav-item">
+                        {% if endpoint_exists('admin.ai_engine.document_list') %}
+                        <a class="nav-link" href="{{ url_for('admin.ai_engine.document_list') }}"><i class="bi bi-file-earmark-text"></i> Document List</a>
+                        {% else %}
+                        <a class="nav-link disabled" href="#" aria-disabled="true"><i class="bi bi-file-earmark-text"></i> Document List</a>
+                        {% endif %}
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('ai_compliance.help_page') }}"><i class="bi bi-question-circle"></i> Help</a>
+                    </li>
+                    <li class="nav-item">
+                        {% if current_user.is_authenticated %}
+                        <a type="button" class="btn btn-outline-light btn-sm" href="{{ url_for('logout', next='/ai-compliance/') }}" role="button">Logout</a>
+                        {% else %}
+                        <a type="button" class="btn btn-outline-light btn-sm" href="{{ url_for('index') }}" role="button">Login</a>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div class="container">
+        {% block content %}
+
+        {% endblock %}
+    </div>
+    </div>
+
+    <script>
+        $.fn.dataTable.moment( 'MM/DD/YYYY hh:mm:ss A' );
+    </script>
+    <!-- Shared modal for Saved AI Analysis Reports (available on CAP pages) -->
+    <div class="modal fade" id="loadReportModal" tabindex="-1" aria-labelledby="loadReportModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="loadReportModalLabel">
+                        <i class="bi bi-folder-open"></i> Saved AI Analysis Reports
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="importReportTextarea" class="form-label">Import exported CUS AI Analysis Report (paste JSON)</label>
+                        <textarea id="importReportTextarea" class="form-control" rows="4" placeholder='Paste exported report JSON here'></textarea>
+                        <div class="mt-2">
+                            <button id="importCusReportBtn" class="btn btn-sm btn-primary">Import Report</button>
+                            <button id="clearImportTextarea" class="btn btn-sm btn-outline-secondary">Clear</button>
+                        </div>
+                    </div>
+                    <div id="savedReportsList" class="list-group">
+                        <!-- Reports will be populated here -->
+                    </div>
+                    <div id="noReportsMessage" class="alert alert-info" style="display:none;">
+                        <i class="bi bi-info-circle"></i> No saved reports found. Run an AI analysis and save it first.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="exportAllReportsBtn" type="button" class="btn btn-primary">Export All Reports (PDF)</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% block content_scripts %}
+
+    {% endblock %}
+    <script>
+        // Global handler: ensure focus is moved out of modal before it is hidden
+        // This reduces the accessibility console error about aria-hidden on a focused
+        // descendant. We proactively set `inert` on the modal, blur the active element,
+        // and move focus to the opener (or a hidden fallback). We then remove `inert`
+        // when the modal is fully hidden.
+        document.addEventListener('hide.bs.modal', function(e) {
+            try {
+                var modal = e.target;
+                if (!modal) return;
+                var active = document.activeElement;
+                if (!active) return;
+                if (modal.contains(active)) {
+                    // Mark modal inert to prevent assistive tech from focusing it
+                    try {
+                        modal.setAttribute('inert', '');
+                    } catch (ie) {
+                        // If inert isn't supported, we at least blur the active element
+                    }
+
+                    // Blur the focused element so aria-hidden will not hide a focused node
+                    try { if (typeof active.blur === 'function') active.blur(); } catch (b) { }
+
+                    // Try to focus the element that likely opened the modal
+                    var opener = null;
+                    try {
+                        if (modal.id) {
+                            opener = document.querySelector('[data-bs-target="#' + modal.id + '"]') || document.querySelector('[data-target="#' + modal.id + '"]');
+                        }
+                    } catch (inner) { opener = null; }
+
+                    if (!opener) opener = document.querySelector('.navbar-brand');
+
+                    try {
+                        if (opener && typeof opener.focus === 'function') {
+                            opener.focus();
+                        } else {
+                            var tmp = document.createElement('div');
+                            tmp.tabIndex = -1;
+                            tmp.style.position = 'fixed';
+                            tmp.style.left = '-9999px';
+                            document.body.appendChild(tmp);
+                            tmp.focus();
+                            setTimeout(function(){ if (tmp && tmp.parentNode) tmp.parentNode.removeChild(tmp); }, 50);
+                        }
+                    } catch (fErr) { console.debug('Modal focus fallback failed', fErr); }
+                }
+            } catch (err) { console.debug('hide.bs.modal handler error', err); }
+        }, true);
+
+        // Remove inert after modal is fully hidden so it can be re-used.
+        document.addEventListener('hidden.bs.modal', function(e){
+            try {
+                var modal = e.target;
+                if (modal && modal.hasAttribute && modal.hasAttribute('inert')) {
+                    modal.removeAttribute('inert');
+                }
+            } catch (err) { console.debug('hidden.bs.modal handler error', err); }
+        }, true);
+
+        // Export all saved reports (server-shared + localStorage) as a single HTML page.
+        (function(){
+            function escapeHtml(text){ return $('<div>').text(text||'').html(); }
+
+            function stringifyExportEvidence(item) {
+                if (!item) return '';
+                if (typeof item === 'string') return item;
+                if (typeof item === 'object') {
+                    var name = item.document_name || item.name || item.title || '';
+                    var snippet = item.snippet || item.excerpt || item.summary || item.match_reason || '';
+                    if (name && snippet) return name + ': ' + snippet;
+                    return name || snippet || String(item.id || '');
+                }
+                return String(item);
+            }
+
+            function trimReportForExport(report) {
+                if (!report) return {};
+                var evidenceKeys = [
+                    'evidence', 'sop_evidence', 'policy_evidence', 'records_evidence',
+                    'onsite_evidence', 'ai_search_evidence', 'source_of_evidence'
+                ];
+                var exportReport = {
+                    report_date: report.report_date,
+                    total_checks: report.total_checks,
+                    compliant: report.compliant,
+                    non_compliant: report.non_compliant,
+                    partial: report.partial,
+                    warnings: report.warnings,
+                    compliance_rate: report.compliance_rate,
+                    ai_gap_analysis: report.ai_gap_analysis,
+                    checks: []
+                };
+                (report.checks || []).forEach(function(raw) {
+                    if (!raw || typeof raw !== 'object') return;
+                    var check = {
+                        status: raw.status || raw.status_value,
+                        checklist_item: raw.checklist_item || raw.check || raw.name,
+                        requirement: raw.requirement || raw.requirement_text,
+                        details: raw.details,
+                        ai_evidence_summary: raw.ai_evidence_summary || raw.ai_search_summary,
+                        findings: (raw.findings || []).map(String),
+                        recommendations: (raw.recommendations || []).map(String),
+                        ai_recommendations: (raw.ai_recommendations || raw.ai_recs || []).map(String)
+                    };
+                    evidenceKeys.forEach(function(key) {
+                        if (raw[key] && raw[key].length) {
+                            check[key] = raw[key].map(stringifyExportEvidence).filter(Boolean);
+                        }
+                    });
+                    exportReport.checks.push(check);
+                });
+                return exportReport;
+            }
+
+            $('#exportAllReportsBtn').on('click', function(){
+                var $btn = $(this);
+                $btn.prop('disabled', true).text('Exporting...');
+
+                // Get server-shared reports first, then include localStorage reports
+                var serverUrl = '{{ url_for("admin.ai_engine.ai_search_reports") }}';
+                var exportUrl = '{{ url_for("admin.ai_engine.export_report") }}';
+
+                $.ajax({ type: 'GET', url: serverUrl, success: function(resp){
+                    var serverReports = (resp && resp.success && resp.reports) ? resp.reports : [];
+                    proceedWithReports(serverReports);
+                }, error: function(){ proceedWithReports([]); } });
+
+                function proceedWithReports(serverReports){
+                    // Exclude any reports the user has locally tombstoned (deleted while server deletion failed)
+                    try {
+                        var deletedTomb = JSON.parse(localStorage.getItem('aiSearchReportsDeleted') || '[]') || [];
+                        if (deletedTomb && deletedTomb.length) {
+                            serverReports = (serverReports || []).filter(function(r){ return deletedTomb.indexOf(String(r.id)) === -1; });
+                        }
+                    } catch (e) { /* ignore tombstone errors and proceed with server list */ }
+
+                    var local = JSON.parse(localStorage.getItem('aiSearchReports') || '[]') || [];
+                    // Merge into map by id (string) to avoid duplicates
+                    var map = {};
+                    serverReports.forEach(function(r){ if (r && r.id != null) map[String(r.id)] = r; });
+                    local.forEach(function(r){ if (!r) return; if (!r.id) r.id = 'local_' + Date.now() + Math.floor(Math.random()*1000); if (!map[String(r.id)]) map[String(r.id)] = r; });
+                    var all = Object.keys(map).map(function(k){ return map[k]; });
+
+                    if (!all || all.length === 0) {
+                        alert('No saved reports found to export.');
+                        $btn.prop('disabled', false).text('Export All Reports (PDF)');
+                        return;
+                    }
+
+                    var exportAllPdfUrl = '{{ url_for("admin.ai_engine.export_all_reports_pdf") }}';
+                    var serverIds = {};
+                    serverReports.forEach(function(r) {
+                        if (r && r.id != null) serverIds[String(r.id)] = true;
+                    });
+                    var localOnly = (local || []).filter(function(r) {
+                        if (!r) return false;
+                        if (r.id == null || String(r.id).indexOf('local_') === 0) return true;
+                        return !serverIds[String(r.id)];
+                    }).map(function(entry) {
+                        var payload = entry.report || entry.search_report || entry.gap_report || entry;
+                        return {
+                            id: entry.id,
+                            name: entry.name,
+                            date: entry.date,
+                            user: entry.user,
+                            report: trimReportForExport(typeof payload === 'object' ? payload : {})
+                        };
+                    });
+
+                    // Load server reports on the server to avoid oversized POST bodies.
+                    $.ajax({
+                        type: 'POST',
+                        url: exportAllPdfUrl,
+                        data: JSON.stringify({ use_server_reports: true, local_reports: localOnly }),
+                        contentType: 'application/json',
+                        xhrFields: { responseType: 'blob' },
+                        success: function(blob){
+                            try {
+                                var url = window.URL.createObjectURL(blob);
+                                var a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'saved_reports_export.pdf';
+                                document.body.appendChild(a);
+                                a.click();
+                                a.remove();
+                                setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+                            } catch (err) {
+                                alert('Download succeeded but opening failed: ' + err);
+                            }
+                            $btn.prop('disabled', false).text('Export All Reports (PDF)');
+                        },
+                        error: function(xhr, status, err){
+                            console.debug('Server PDF export failed', status, err, xhr);
+                            alert('Server failed to generate PDF: ' + (xhr.responseText || status));
+                            $btn.prop('disabled', false).text('Export All Reports (PDF)');
+                        }
+                    });
+                }
+            });
+        })();
+    </script>
+</body>
+
+</html>

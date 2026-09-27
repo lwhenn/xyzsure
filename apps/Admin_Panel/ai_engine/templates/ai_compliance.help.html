@@ -1,0 +1,140 @@
+{% extends 'ai_compliance.base.html' %}
+
+{% block title %}AI Compliance Help{% endblock %}
+
+{% block content %}
+<div class="py-4">
+    <div class="mb-4">
+        <h1 class="display-6 fw-bold mb-2"><i class="bi bi-question-circle"></i> AI Compliance Help</h1>
+        <p class="lead mb-0">How to run CAP checklist gap analysis, review evidence, and track remediation.</p>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header text-white" style="background:#2a9d8f;">
+            <h4 class="mb-0">Overview</h4>
+        </div>
+        <div class="card-body">
+            <p class="mb-0">AI Compliance validates CAP checklist requirements using live LIMS data, indexed documents, and AI analysis. The main workflow is <strong>AI Gap Analysis</strong> — workbook-style gap assessment with evidence search and remediation tracking. Admin access is required.</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Common Workflow</h5>
+        </div>
+        <div class="card-body">
+            <ol class="mb-0">
+                <li>Open <strong>AI Compliance → Gap Analysis</strong> (or start from the AI Compliance home tiles).</li>
+                <li>Select the sheet/tab (if multiple) to load the CAP matrix.</li>
+                <li>Check the requirement(s) you want to analyze.</li>
+                <li>Choose an AI model from the drop-down.</li>
+                <li>Click <strong>Run AI Gap Analysis</strong> to populate Status, Gap Analysis, Corrective Actions, AI Search Summary, and AI Search Evidence.</li>
+                <li>Optionally ask <strong>follow-up questions</strong> on a requirement after the initial run.</li>
+                <li>Enter or edit <strong>Remediation</strong> notes when corrective actions are complete — documented remediation can update requirement status when completion criteria are met.</li>
+                <li>Use <strong>Show Gap Analysis Details</strong> to expand workbook columns (Status, Gap Analysis, Corrective Actions, Remediation).</li>
+                <li>When prompted, choose whether to save results back to Google Sheets (export runs in the background).</li>
+                <li>Revisit saved runs in <strong>Search Results</strong> or the <strong>Result Viewer</strong>.</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Module pages</h5>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li><strong>AI Gap Analysis:</strong> Workbook-style assessments with Status, Gap Analysis, Corrective Actions, Remediation, and evidence search</li>
+                <li><strong>AI Search Results:</strong> Browse and manage saved compliance reports</li>
+                <li><strong>Result Viewer:</strong> Inspect an individual requirement result with evidence excerpts</li>
+                <li><strong>Document List:</strong> View indexed compliance documents used by AI search</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="alert mb-4" style="background:#e6f6f3; border-color:#7ec8bc; color:#145a52;">
+        <strong><i class="bi bi-robot"></i> AI capabilities</strong>
+        <ul class="mb-0 mt-2">
+            <li><strong>AI Search Summary:</strong> Audit-ready narrative of compliance evidence per requirement</li>
+            <li><strong>AI Search Evidence:</strong> Ranked document excerpts supporting the summary</li>
+            <li><strong>Gap Analysis:</strong> Identified gaps with regulatory context</li>
+            <li><strong>Corrective Actions:</strong> Recommended remediation steps per requirement</li>
+            <li><strong>Remediation:</strong> Track completed corrective actions in the workbook Remediation column</li>
+            <li><strong>Follow-up questions:</strong> Ask clarifying questions after an initial Gap Analysis run</li>
+            <li><strong>Smart Document Search:</strong> Finds relevant SOPs and validation documents</li>
+        </ul>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header text-white" style="background:#1f7a6f;">
+            <h5 class="mb-0">What is AI Gap Analysis?</h5>
+        </div>
+        <div class="card-body">
+            <p>The <strong>AI Gap Analysis</strong> page provides a site-specific CAP workbook review where you select individual requirements and run AI-powered gap assessment with document search. Use it when you need evidence, gap narrative, corrective actions, and remediation tracking for a subset of checklist items (for example, GEN.* items for a specific instrument or workflow).</p>
+            <ul class="mb-0">
+                <li><strong>Matrix-driven:</strong> Reads your CAP Custom Checklist Matrix (CSV or Google Sheet) and exposes requirement rows for selection.</li>
+                <li><strong>Per-requirement AI context:</strong> The AI receives requirement metadata (including <em>Subject</em> and <em>Policy/Procedure</em>) plus Evidence/Notes to build audit-ready recommendations.</li>
+                <li><strong>Save back to sheet:</strong> After analysis you may save Status, Gap Analysis, Corrective Actions, Remediation, and AI Search fields back to the Google Sheet. Export is non-blocking.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Important notes and troubleshooting</h5>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li><strong>Subject &amp; Policy/Procedure:</strong> Included in the AI prompt. In some setups <code>Policy/Procedure</code> is maintained in the canonical CAP Google Sheet (<code>CAP_SHEET_ID</code>) rather than the local matrix — Gap Analysis reads it from the CAP sheet when available.</li>
+                <li><strong>UI row updates:</strong> Selected requirement codes are matched to table rows to update Status, Gap Analysis, Corrective Actions, AI Search Summary, and AI Search Evidence. If values do not update, inspect the JSON response in Developer Tools → Network.</li>
+                <li><strong>Saving to Google Sheets:</strong> Requires write access for the app’s Google credentials. Failures are shown in the UI; reports can still be stored locally. Sheet export is non-blocking.</li>
+                <li><strong>Permissions &amp; API keys:</strong> AI features need a provider API key; Google integrations need valid credentials. Check Admin Panel → Settings if you see authentication errors.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header text-white" style="background:#1f7a6f;">
+            <h5 class="mb-0">CAP Custom Checklist Matrix <span class="badge bg-light" style="color:#1f7a6f;">AI Input</span></h5>
+        </div>
+        <div class="card-body">
+            <p>These matrix fields drive evaluations and enrich AI prompts:</p>
+            <ul class="mb-0">
+                <li><strong>Requirement ID / Requirement:</strong> Match selected codes to matrix rows and build keyword tokens for document search.</li>
+                <li><strong>Type:</strong> Marks a requirement as Automated, Partial, Manual, or N/A. An empty Status is treated as Not Applicable.</li>
+                <li><strong>Evidence Source and Notes:</strong> Shown in the matrix UI and included in the AI evidence payload.</li>
+                <li><strong>Section:</strong> Used for grouping and display; helpful context but not required for AI prompts.</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="alert mb-4" style="background:#eef9f7; border-color:#7ec8bc; color:#145a52;">
+        <strong>Tip:</strong> Run gap analysis regularly before CAP inspections. The system queries live LIMS data and Document Control records to identify gaps; AI provides actionable recommendations for your findings.
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Understanding results</h5>
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li><strong>Findings:</strong> What the system discovered during validation</li>
+                <li><strong>Evidence:</strong> Supporting data from LIMS / Document Control</li>
+                <li><strong>AI Search Summary:</strong> Audit-ready narrative summary of compliance evidence</li>
+                <li><strong>AI Search Evidence:</strong> Ranked document excerpts supporting the summary</li>
+                <li><strong>Gap Analysis / Corrective Actions / Remediation:</strong> Workbook fields for tracking gaps and completed remediation</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-2">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">AI setup (optional)</h5>
+        </div>
+        <div class="card-body">
+            <p class="mb-2">To enable AI features, add a provider API key to your <code>.env</code> file.</p>
+            <p class="small text-muted mb-0">Without an API key, matrix browsing and non-AI workflows still work, but Gap Analysis and document search require a configured model.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

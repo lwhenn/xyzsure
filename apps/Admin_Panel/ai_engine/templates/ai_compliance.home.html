@@ -1,0 +1,116 @@
+{% extends 'ai_compliance.base.html' %}
+
+{% block content_links %}
+<style>
+  .container {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 12px;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  }
+  svg a { text-decoration: none; }
+</style>
+{% endblock %}
+
+{% block title %}AI Compliance{% endblock %}
+
+{% block content %}
+<div class="py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h1 class="card-title">Welcome to AI Compliance</h1>
+                    <p class="card-subtitle"><b>AI Compliance validates CAP checklist requirements using live LIMS data, indexed documents, and AI analysis.</b></p>
+                    <br/>
+                    <div class="col-sm-12">
+                        <p>AI Compliance supports every critical function, including:</p>
+                        <ul>
+                            <li><b>AI Gap Analysis:</b> Workbook-style assessment against CAP requirements, with evidence search and remediation tracking.</li>
+                            <li><b>Evidence Search:</b> Audit-ready AI summaries and ranked document excerpts for each selected requirement.</li>
+                            <li><b>Remediation Tracking:</b> Corrective actions and completion notes that can update requirement status when criteria are met.</li>
+                            <li><b>Search Results &amp; Viewer:</b> Browse saved compliance reports and inspect a single result in detail.</li>
+                            <li><b>Document List:</b> Review indexed SOPs and validation documents used as AI compliance evidence.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card text-center shadow-sm">
+                <div class="card-body">
+                    <h4 class="card-title">Hello, {{ current_user.name }}!</h4>
+                    <p class="card-text">Quick actions</p>
+                    <div class="d-grid gap-2">
+                        {% if endpoint_exists('admin.ai_engine.ai_gap_analysis') %}
+                        <a class="btn btn-primary" href="{{ url_for('admin.ai_engine.ai_gap_analysis') }}">AI Gap Analysis</a>
+                        {% else %}
+                        <a class="btn btn-primary disabled" href="#" aria-disabled="true">AI Gap Analysis</a>
+                        {% endif %}
+                        {% if endpoint_exists('admin.ai_search_results') %}
+                        <a class="btn btn-outline-secondary" href="{{ url_for('admin.ai_search_results') }}">Search Results</a>
+                        {% else %}
+                        <a class="btn btn-outline-secondary disabled" href="#" aria-disabled="true">Search Results</a>
+                        {% endif %}
+                        <a class="btn btn-outline-secondary" href="{{ url_for('ai_compliance.help_page') }}">Help</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 justify-content-center">
+        <div class="col-md-6 col-lg-4">
+            {% if endpoint_exists('admin.ai_engine.ai_gap_analysis') %}
+            <a href="{{ url_for('admin.ai_engine.ai_gap_analysis') }}" class="text-decoration-none">
+            {% else %}
+            <a href="#" class="text-decoration-none disabled" aria-disabled="true">
+            {% endif %}
+                <div class="p-4 h-100 text-white rounded-3" style="background:#2a9d8f;">
+                    <div class="fs-4 mb-2"><i class="bi bi-journal-medical"></i> AI Gap Analysis</div>
+                    <div class="small opacity-90">Assess gaps against CAP requirements.</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            {% if endpoint_exists('admin.ai_search_results') %}
+            <a href="{{ url_for('admin.ai_search_results') }}" class="text-decoration-none">
+            {% else %}
+            <a href="#" class="text-decoration-none disabled" aria-disabled="true">
+            {% endif %}
+                <div class="p-4 h-100 text-white rounded-3" style="background:#248f82;">
+                    <div class="fs-4 mb-2"><i class="bi bi-list-columns-reverse"></i> AI Search Results</div>
+                    <div class="small opacity-90">Browse saved and recent search outputs.</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            {% if endpoint_exists('admin.ai_search_result_single') %}
+            <a href="{{ url_for('admin.ai_search_result_single') }}" class="text-decoration-none">
+            {% else %}
+            <a href="#" class="text-decoration-none disabled" aria-disabled="true">
+            {% endif %}
+                <div class="p-4 h-100 text-white rounded-3" style="background:#1f7a6f;">
+                    <div class="fs-4 mb-2"><i class="bi bi-eye"></i> Result Viewer</div>
+                    <div class="small opacity-90">Inspect a single compliance result in detail.</div>
+                </div>
+            </a>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            {% if endpoint_exists('admin.ai_engine.document_list') %}
+            <a href="{{ url_for('admin.ai_engine.document_list') }}" class="text-decoration-none">
+            {% else %}
+            <a href="#" class="text-decoration-none disabled" aria-disabled="true">
+            {% endif %}
+                <div class="p-4 h-100 text-white rounded-3" style="background:#1a665d;">
+                    <div class="fs-4 mb-2"><i class="bi bi-file-earmark-text"></i> Document List</div>
+                    <div class="small opacity-90">Review documents used for AI compliance evidence.</div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

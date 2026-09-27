@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XYZSure — CLIA compliance help for small clinical laboratories</title>
+  <meta name="description" content="XYZSure is XYZ Laboratory’s AI compliance tool for small labs that need their procedures, records, and inspection readiness in order — without building a compliance department.">
+  <link rel="stylesheet" href="{{ url_for('static', filename='bootstrap/css/bootstrap.min.css') }}">
+  <style>
+    :root {
+      --xyz-ink: #1a2b3c;
+      --xyz-teal: #0d6e6e;
+      --xyz-mist: #e8f1f1;
+      --xyz-teal-deep: #1a665d;
+      --xyz-mint: #7ec8bc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--xyz-ink);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: #f4faf9;
+    }
+
+    /* —— Ad hero (clickable CTA) —— */
+    .ad-hero {
+      position: relative;
+      min-height: min(72vh, 640px);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 55% 80% at 88% 45%, rgba(126, 200, 188, 0.55), transparent 60%),
+        linear-gradient(115deg, #eef9f7 0%, #d5f0eb 42%, #7ec8bc 100%);
+    }
+
+    .ad-hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(238, 249, 247, 0.92) 0%, rgba(238, 249, 247, 0.75) 48%, transparent 72%),
+        url("{{ url_for('static', filename='marketing/xyzsure-marketing-ad.png') }}") right center / cover no-repeat;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .ad-inner {
+      position: relative;
+      z-index: 1;
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      padding: clamp(2.5rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 2.5rem);
+    }
+
+    .brand {
+      margin: 0 0 1rem;
+      font-size: clamp(2.75rem, 7vw, 4.25rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: var(--xyz-teal);
+    }
+
+    .headline {
+      margin: 0 0 0.75rem;
+      max-width: 26ch;
+      font-size: clamp(1.6rem, 3.2vw, 2.2rem);
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--xyz-ink);
+    }
+
+    .support {
+      margin: 0 0 1.75rem;
+      max-width: 52ch;
+      font-size: 1.1rem;
+      line-height: 1.45;
+      color: #3d5160;
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.85rem 1.6rem;
+      border-radius: 8px;
+      background: var(--xyz-teal);
+      color: #fff !important;
+      font-weight: 600;
+      font-size: 1.05rem;
+      text-decoration: none;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .cta:hover,
+    .cta:focus-visible {
+      background: var(--xyz-teal-deep);
+      transform: translateY(-1px);
+      outline: none;
+    }
+
+    .cta:focus-visible {
+      box-shadow: 0 0 0 3px rgba(13, 110, 110, 0.35);
+    }
+
+    .tagline {
+      margin: 1.5rem 0 0;
+      font-size: 0.9rem;
+      color: #5a6f7c;
+    }
+
+    /* —— How it works —— */
+    .workflow {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      padding: clamp(3rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 2.5rem) 4rem;
+    }
+
+    .workflow h2 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.5rem, 3vw, 1.85rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .workflow > p {
+      margin: 0 0 2rem;
+      max-width: 52ch;
+      color: #4a5c6a;
+    }
+
+    .steps {
+      display: grid;
+      gap: 1.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin: 0 0 2.5rem;
+      padding: 0;
+      list-style: none;
+    }
+
+    .steps li {
+      padding: 0;
+      border: none;
+      background: transparent;
+    }
+
+    .steps .num {
+      display: block;
+      margin-bottom: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--xyz-teal);
+    }
+
+    .steps h3 {
+      margin: 0 0 0.4rem;
+      font-size: 1.15rem;
+      font-weight: 650;
+    }
+
+    .steps p {
+      margin: 0;
+      font-size: 0.98rem;
+      line-height: 1.45;
+      color: #4a5c6a;
+    }
+
+    .footer-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .cta-secondary {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.85rem 1.4rem;
+      border-radius: 8px;
+      border: 1.5px solid var(--xyz-teal);
+      color: var(--xyz-teal) !important;
+      font-weight: 600;
+      text-decoration: none;
+      background: transparent;
+    }
+
+    .cta-secondary:hover,
+    .cta-secondary:focus-visible {
+      background: rgba(13, 110, 110, 0.08);
+      outline: none;
+    }
+
+    /* —— Introduction —— */
+    .intro {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      padding: clamp(3rem, 6vw, 4.5rem) clamp(1.25rem, 4vw, 2.5rem) 0;
+    }
+
+    .intro-lead {
+      margin: 0 0 2rem;
+      max-width: 68ch;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      color: #3d5160;
+    }
+
+    .points {
+      display: grid;
+      gap: 1.25rem;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .points li {
+      padding-left: 1rem;
+      border-left: 3px solid var(--xyz-mint);
+      font-size: 1rem;
+      line-height: 1.45;
+      color: var(--xyz-ink);
+    }
+
+    /* —— Short ad —— */
+    .short-ad {
+      background: var(--xyz-teal);
+      color: #fff;
+    }
+
+    .short-ad-inner {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      padding: clamp(2.5rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 2.5rem);
+    }
+
+    .short-ad p {
+      margin: 0;
+      max-width: 60ch;
+      font-size: 1.2rem;
+      line-height: 1.5;
+    }
+
+    .short-ad .short-ad-kicker {
+      margin-top: 0.75rem;
+      font-weight: 650;
+      color: var(--xyz-mist);
+    }
+
+    /* —— Footer —— */
+    .site-footer {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      padding: 1.75rem clamp(1.25rem, 4vw, 2.5rem) 2.5rem;
+    }
+
+    .site-footer p {
+      margin: 0;
+      max-width: 72ch;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #5a6f7c;
+    }
+  </style>
+</head>
+<body>
+  <section class="ad-hero" aria-label="XYZSure marketing ad">
+    <div class="ad-inner">
+      <p class="brand">XYZSure</p>
+      <h1 class="headline">CLIA compliance help for small clinical laboratories, from a laboratory that lives in it.</h1>
+      <p class="support">
+        XYZSure is XYZ Laboratory’s AI compliance tool for small labs that need their procedures,
+        records, and inspection readiness in order — without building a compliance department.
+      </p>
+      <a class="cta" href="#how-it-works">See how it works</a>
+    </div>
+  </section>
+
+  <section class="intro" aria-label="About XYZSure">
+    <p class="intro-lead">
+      Small clinical laboratories are held to the same CLIA expectations as much larger ones, with far
+      less staff to write procedures, track competency, and get ready for survey. XYZSure was built inside
+      XYZ Laboratory for that gap. It helps your team organize CLIA documentation, spot what is missing,
+      and keep the file current between inspections. The laboratory director stays responsible. XYZSure
+      makes the work faster and more consistent.
+    </p>
+    <ul class="points">
+      <li>Written for physician-office labs and independent clinical laboratories, not hospital systems.</li>
+      <li>Grounded in how a working CLIA laboratory actually keeps its own program.</li>
+      <li>A tool your staff can use day to day, backed by XYZ Laboratory in Lakeway, Texas.</li>
+    </ul>
+  </section>
+
+  <section class="workflow" id="how-it-works">
+    <h2>How XYZSure works</h2>
+    <p>
+      XYZSure works from your compliance checklist, your procedures and records, and live LIMS data —
+      so a small team can see what is in place, what is missing, and what to fix before survey.
+    </p>
+    <ol class="steps">
+      <li>
+        <span class="num">01</span>
+        <h3>Gap analysis</h3>
+        <p>Select requirements and let AI flag what is in place, what is missing, and the corrective action for each.</p>
+      </li>
+      <li>
+        <span class="num">02</span>
+        <h3>Evidence search</h3>
+        <p>Pull survey-ready summaries and ranked excerpts from your procedures, validations, and records for each requirement.</p>
+      </li>
+      <li>
+        <span class="num">03</span>
+        <h3>Remediation</h3>
+        <p>Track fixes, follow up with questions, and export results to Google Sheets to keep the file current between inspections.</p>
+      </li>
+    </ol>
+    <div class="footer-cta">
+      <a class="cta" href="{{ url_for('index') }}">Sign in to get started</a>
+      <a class="cta-secondary" href="mailto:info@xyzlabc.com">Contact info@xyzlabc.com</a>
+    </div>
+  </section>
+
+  <section class="short-ad" aria-label="XYZSure in brief">
+    <div class="short-ad-inner">
+      <p>
+        CLIA work piles up when the lab is small. XYZSure, from XYZ Laboratory, helps you keep procedures,
+        records, and survey readiness in one place.
+      </p>
+      <p class="short-ad-kicker">Built by a clinical laboratory. Made for labs like yours.</p>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <p>
+      XYZSure is a service of XYZ Laboratory, Lakeway, Texas. It supports your CLIA program.
+      It does not replace the laboratory director or provide legal advice.
+    </p>
+  </footer>
+</body>
+</html>

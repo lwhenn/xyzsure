@@ -1,0 +1,34 @@
+# Example systemd unit for XYZSure on the same VM as XYZ-LIMS.
+# Install:
+#   sudo cp deploy/xyzsure.service.example /etc/systemd/system/xyzsure.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now xyzsure
+#
+# Adjust paths/user to match the VM.
+
+[Unit]
+Description=Gunicorn instance for XYZSure (AI Compliance)
+After=network.target
+
+[Service]
+User=administrator
+Group=www-data
+WorkingDirectory=/usr/xyz_tools/xyzsure
+Environment="PATH=/usr/xyz_tools/xyzsure/.venv/bin"
+EnvironmentFile=/usr/xyz_tools/xyzsure/.env
+# Separate Unix socket from LIMS — do not reuse XYZ-LIMS.sock
+ExecStart=/usr/xyz_tools/xyzsure/.venv/bin/gunicorn \
+  --workers 3 \
+  --threads 2 \
+  --preload \
+  --bind unix:/usr/xyz_tools/xyzsure/xyzsure.sock \
+  -m 007 \
+  --error-logfile /usr/xyz_tools/xyzsure/gunicorn.error.log \
+  --access-logfile /usr/xyz_tools/xyzsure/gunicorn.access.log \
+  --capture-output \
+  --log-level info \
+  wsgi:app
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,53 @@
+.modal-dialog {
+  max-width: 800px;
+}
+
+/* Limit height of the Saved Reports modal and make its body scrollable */
+/* Targeting #loadReportModal keeps this change scoped to the saved-reports UI */
+#loadReportModal .modal-body {
+  max-height: calc(100vh - 220px);
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure long report text/content wraps inside list items instead of overflowing */
+#loadReportModal .list-group-item {
+  word-break: break-word;
+  white-space: normal;
+}
+
+/* Keep delete button anchored and prevent it from wrapping; allow left content to truncate */
+#loadReportModal .load-report-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+#loadReportModal .load-report-item > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0; /* allow flex children to shrink for text-overflow to work */
+  overflow: hidden;
+}
+
+#loadReportModal .load-report-item h6.mb-1 {
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#loadReportModal .load-report-item p.mb-1 {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#loadReportModal .load-report-item .ms-3 {
+  flex: 0 0 auto;
+}
+
+#loadReportModal .delete-report {
+  white-space: nowrap;
+}

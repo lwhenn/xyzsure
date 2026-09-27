@@ -1,0 +1,443 @@
+{% extends "ai_compliance.base.html" %}
+{% block title %}CAP Compliance - Single Result View{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row">
+    <div class="col-12">
+      <h2><i class="bi bi-file-earmark-text"></i>AI Search Result Viewer</h2>
+      <p class="lead">Use the navigation buttons to move between results, save your comments.</p>
+    </div>
+  </div>
+
+  <div class="row mt-3">
+    <div class="col-md-8">
+      <div id="singleResultCard" class="card">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <button id="prevBtn" class="btn btn-outline-primary btn-sm">&larr; Prev</button>
+              <button id="nextBtn" class="btn btn-outline-primary btn-sm">Next &rarr;</button>
+            </div>
+            <div>
+              <small id="positionInfo" class="text-muted">0 / 0</small>
+            </div>
+          </div>
+          <h5 id="reqTitle" class="card-title">Loading...</h5>
+          <h6 id="reqId" class="card-subtitle mb-2 text-muted"></h6>
+          <div id="reqStatus" class="mb-2"></div>
+          <div class="mb-3">
+            <small class="text-muted d-block">Date: <span id="reqDate" class="fw-semibold">-</span></small>
+          </div>
+          <div class="mb-3">
+            <h6 class="mb-1 text-muted small">AI Search Summary</h6>
+            <div id="reqAISearchSummary" class="p-2 border rounded bg-light"></div>
+          </div>
+          <div class="mb-3">
+            <h6 class="mb-1 text-muted small">AI Search Evidence</h6>
+            <div id="reqAISearchEvidence" class="p-2 border rounded bg-light"></div>
+          </div>
+          <div id="gapAnalysisSection" class="mb-3" style="display:none;">
+            <h6 class="mb-1 text-muted small">AI Gap Analysis</h6>
+            <div id="reqGapAnalysis" class="p-2 border rounded bg-light mb-2"></div>
+            <h6 class="mb-1 text-muted small">Priority Actions</h6>
+            <div id="reqPriorityActions" class="p-2 border rounded bg-light mb-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h6>Controls</h6>
+          <div class="mb-2">
+            <label class="form-label">Sheet</label>
+            <select id="sheetSelect" class="form-select">
+              <option value="{{ CAP_SHEET_NAME }}">{{ CAP_SHEET_NAME }}</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Requirement ID</label>
+            <select id="filterCode" class="form-select">
+              <option value="">(all)</option>
+            </select>
+          </div>
+          <div class="d-grid gap-2 mb-3">
+            <button id="loadBtn" class="btn btn-primary">Load</button>
+          </div>
+
+          <!-- Comments moved here under Controls -->
+          <div class="mb-2">
+            <label class="form-label"><strong>Comments</strong></label>
+            <textarea id="commentsText" class="form-control" rows="6" placeholder="Add comments for this requirement..."></textarea>
+            <div class="mt-2 d-flex justify-content-end">
+              <button id="saveCommentBtn" class="btn btn-sm btn-success">Save Comment</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(function(){
+  const CAP_SHEET_NAME = '{{ CAP_SHEET_NAME }}';
+  const CAP_SHEET_ID = '{{ CAP_SHEET_ID }}';
+
+  let rows = [];
+  let headers = [];
+  let index = 0;
+  let docLinksLookup = {};
+
+  // Fetch document links lookup on startup
+  $.ajax({
+    url: '{{ url_for("admin.ai_engine.get_inspection_links_api") }}',
+    success: function(resp) {
+      if (resp && resp.success) {
+        docLinksLookup = resp.links || {};
+        console.log(`Loaded ${Object.keys(docLinksLookup).length} document links for evidence mapping`);
+      }
+    }
+  });
+
+  function normalize(name) {
+    if (!name) return "";
+    let n = String(name).split("/").pop().split("\\").pop();
+    n = n.includes(".") ? n.split(".").slice(0, -1).join(".") : n;
+    return n.toLowerCase().trim().replace(/\s*\(\d+\)\s*$/, "").replace(/\s+/g, " ");
+  }
+
+  function formatText(text) {
+    if (!text) return '';
+    // Basic HTML escaping
+    let escaped = $('<div>').text(text).html();
+    // Convert newlines to <br>
+    escaped = escaped.replace(/\n/g, '<br>');
+    // Linkify URLs
+    escaped = escaped.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank">$1</a>');
+    return escaped;
+  }
+
+  function formatEvidence(text) {
+    if (!text) return '';
+    
+    // Split by semicolon and/or newline
+    let items = text.split(/[;\n]/);
+    let html = '<ul>';
+    let count = 0;
+    
+    // Track how many times each document name has been seen in this requirement
+    // to pick the next available link from the duplicate list
+    const seenCounts = {};
+    
+    items.forEach(item => {
+      let trimmed = item.trim();
+      if (!trimmed) return;
+      count++;
+      
+      let link = null;
+      const norm = normalize(trimmed);
+      
+      // Determine which link to use (cycle through duplicates)
+      const links = docLinksLookup[trimmed] || docLinksLookup[norm];
+      if (links && Array.isArray(links) && links.length > 0) {
+        // Initialize or increment counter for this document name
+        seenCounts[norm] = (seenCounts[norm] || 0) + 1;
+        // Use the index based on seen count (wrap around if needed)
+        const linkIdx = (seenCounts[norm] - 1) % links.length;
+        link = links[linkIdx];
+      }
+      
+      // 3. Try to find if item itself is a URL (fallback)
+      if (!link) {
+        let urlMatch = trimmed.match(/(https?:\/\/[^\s<>]+)/);
+        if (urlMatch) link = urlMatch[1];
+      }
+      
+      if (link) {
+        html += `<li><a href="${link}" target="_blank">${trimmed}</a></li>`;
+      } else {
+        html += `<li>${trimmed}</li>`;
+      }
+    });
+    
+    html += '</ul>';
+    return count > 0 ? html : formatText(text);
+  }
+
+  function getValueFromMap(map, candidates) {
+    for (let cand of candidates) {
+      if (map[cand]) return map[cand];
+      const normalized = cand.toLowerCase().replace(/[_\s()]/g, '');
+      for (let key in map) {
+        if (key && key.toLowerCase().replace(/[_\s()]/g, '') === normalized && map[key]) {
+          return map[key];
+        }
+      }
+    }
+    return '';
+  }
+
+  function renderGapAnalysis(map) {
+    const gapAnalysisVal = getValueFromMap(map, ['AI Gap Analysis', 'ai_gap_analysis', 'Gap Analysis', 'gap_analysis']);
+    const priorityActionsVal = getValueFromMap(map, [
+      'Corrective Actions', 'corrective_actions', 'Corrective Action',
+      'Priority Actions', 'priority_actions'
+    ]);
+    const hasGapData = Boolean(gapAnalysisVal || priorityActionsVal);
+
+    if (!hasGapData) {
+      $('#gapAnalysisSection').hide();
+      $('#reqGapAnalysis').html('');
+      $('#reqPriorityActions').html('');
+      return;
+    }
+
+    $('#gapAnalysisSection').show();
+    $('#reqGapAnalysis').html(formatText(gapAnalysisVal || ''));
+    $('#reqPriorityActions').html(formatText(priorityActionsVal || ''));
+  }
+
+  function renderItem(i){
+    if(!rows || rows.length === 0){
+      $('#reqTitle').text('No results');
+      $('#reqId').text('');
+      $('#reqStatus').html('');
+      $('#gapAnalysisSection').hide();
+      $('#positionInfo').text('0 / 0');
+      return;
+    }
+    index = Math.max(0, Math.min(i, rows.length-1));
+    const r = rows[index];
+    const map = {};
+    headers.forEach((h, ci)=>{ map[h] = r[ci] || ''; });
+
+    // Special handling for AI Gap Analysis sheet
+    if (map['AI Gap Analysis'] && !map['Requirement'] && !map['Requirement (ID)']) {
+        $('#reqTitle').text('AI Gap Analysis');
+        $('#reqId').text('Gap Analysis Report');
+        
+        try {
+            const dateVal = map['Date'] || map['date'] || '-';
+            $('#reqDate').text(dateVal);
+        } catch (e) { $('#reqDate').text('-'); }
+        
+        $('#reqStatus').html('<span class="badge bg-info text-dark">Info</span>');
+        
+        $('#reqAISearchSummary').prev('h6').text('Analysis');
+        $('#reqAISearchSummary').html(formatText(map['AI Gap Analysis'] || ''));
+        
+        $('#reqAISearchEvidence').prev('h6').text('Priority Actions');
+        $('#reqAISearchEvidence').html(formatText(getValueFromMap(map, [
+          'Corrective Actions', 'corrective_actions', 'Corrective Action',
+          'Priority Actions', 'priority_actions'
+        ]) || ''));
+        renderGapAnalysis(map);
+        
+        let commentsVal = '';
+        try{
+            const commentsIdx = headers.findIndex(h => String(h||'').trim().toLowerCase() === 'comments');
+            if(commentsIdx >= 0){ commentsVal = r[commentsIdx] || ''; }
+        }catch(e){ commentsVal = ''; }
+        $('#commentsText').val(commentsVal);
+        
+        window.__current_sheet_row_index = r.__originalIndex !== undefined ? r.__originalIndex : index;
+        $('#positionInfo').text((index+1) + ' / ' + rows.length);
+        return;
+    }
+
+    $('#reqTitle').text(map['Requirement'] || map['Requirement (ID)'] || map['Requirement Text'] || 'Requirement');
+    $('#reqId').text(map['Requirement (ID)'] || map['Requirement ID'] || map['ID'] || '');
+    $('#reqAISearchSummary').prev('h6').text('AI Search Summary');
+    $('#reqAISearchEvidence').prev('h6').text('AI Search Evidence');
+    // Display Date column if available
+    try {
+      const dateVal = map['Date'] || map['date'] || map['Review Date'] || map['Compliance Date'] || '-';
+      $('#reqDate').text(dateVal);
+    } catch (e) {
+      $('#reqDate').text('-');
+    }
+    // keep Requirement ID dropdown in sync with displayed row
+    try {
+      const candidates = ["Requirement (ID)", "Requirement ID", "ID", "Req ID", "Code", "Checklist Item", "checklist_item"];
+      let codeVal = '';
+      for (let c of candidates) {
+        const idx = headers.findIndex(h => String(h || "").trim().toLowerCase() === String(c).trim().toLowerCase());
+        if (idx >= 0) { codeVal = (r[idx] || '').toString().trim(); break; }
+      }
+      const sel = $('#filterCode');
+      if (codeVal) {
+        if (!sel.find(`option[value="${codeVal}"]`).length) {
+          sel.append(new Option(codeVal, codeVal));
+        }
+        sel.val(codeVal);
+      }
+    } catch (e) { /* ignore */ }
+    // Render status as a badge for quick visual scanning
+    const statusText = (map['Status'] || map['status'] || '').toString();
+    let statusClass = 'bg-info';
+    const st = statusText.toLowerCase();
+    if(st.includes('non-compliant') || st.includes('non compliant') || st.includes('non_compliant') || st.includes('fail')) statusClass = 'bg-danger text-white';
+    else if(st.includes('active') || st.includes('compli') || st.includes('pass')) statusClass = 'bg-success text-white';
+    else if(st.includes('deprecat') || st.includes('obsolete')) statusClass = 'bg-secondary text-white';
+    else if(st.includes('warn') || st.includes('caution')) statusClass = 'bg-warning text-dark';
+    const badge = statusText ? `<span class="badge ${statusClass}">${statusText}</span>` : '';
+    $('#reqStatus').html(badge);
+
+    // Support multiple field name variations for Summary and Evidence columns
+    // Use case-insensitive matching by checking normalized column names
+    
+    // Find AI Search Summary column using multiple variations
+    let summaryVal = '';
+    const summaryCandidates = [
+      'AI Search Summary', 'AI_Search_Summary', 'AI Search Summary (Vertex AI)',
+      'Search Summary', 'AI Search Summary (Vertex)', 'AI Evidence', 'AI_Evidence',
+      'AI Search Summary', 'AI Evidence (Summary)', 'AI_Evidence_Summary'
+    ];
+    for (let cand of summaryCandidates) {
+      if (map[cand]) {
+        summaryVal = map[cand];
+        break;
+      }
+      // Try case-insensitive match
+      const normalized = cand.toLowerCase().replace(/[_\s()]/g, '');
+      for (let key in map) {
+        if (key && key.toLowerCase().replace(/[_\s()]/g, '') === normalized && map[key]) {
+          summaryVal = map[key];
+          break;
+        }
+      }
+      if (summaryVal) break;
+    }
+    $('#reqAISearchSummary').html(formatText(summaryVal));
+    
+    // Find AI Search Evidence column - use first occurrence by index
+    let evidenceVal = '';
+    const evidenceColIdx = headers.findIndex(h => String(h || '').trim() === 'AI Search Evidence');
+    
+    if (evidenceColIdx >= 0 && evidenceColIdx < r.length) {
+      evidenceVal = r[evidenceColIdx] || '';
+    }
+    
+    $('#reqAISearchEvidence').html(formatEvidence(evidenceVal));
+    renderGapAnalysis(map);
+    
+    let commentsVal = '';
+    try{
+        const commentsIdx = headers.findIndex(h => String(h||'').trim().toLowerCase() === 'comments');
+        if(commentsIdx >= 0){ commentsVal = r[commentsIdx] || ''; }
+    }catch(e){ commentsVal = ''; }
+    $('#commentsText').val(commentsVal);
+    // Store the actual sheet row index for saving (attached to row during filtering)
+    window.__current_sheet_row_index = r.__originalIndex !== undefined ? r.__originalIndex : index;
+    $('#positionInfo').text((index+1) + ' / ' + rows.length);
+  }
+
+  function loadSheet(sheet){
+    $('#reqTitle').text('Loading...');
+    $.ajax({
+      url: '{{ url_for("admin.ai_engine.cap_compliance_sheet") }}',
+      data: { sheet: sheet },
+      success: function(resp){
+        if(!resp || !resp.headers){
+          alert('Failed to load sheet'); return;
+        }
+        headers = resp.headers;
+        rows = resp.rows || [];
+        // keep header_row_index for computing actual sheet row numbers when saving
+        window.__cap_header_row_index = typeof resp.header_row_index !== 'undefined' ? resp.header_row_index : 0;
+
+        // populate Requirement ID select based on sheet data
+        try{
+          const candidates = ["Requirement (ID)", "Requirement ID", "ID", "Req ID", "Code", "Checklist Item", "checklist_item"];
+          let codeCol = null;
+          for(let c of candidates){
+            const idx = headers.findIndex(h => String(h || "").trim().toLowerCase() === String(c).trim().toLowerCase());
+            if(idx >= 0){ codeCol = idx; break; }
+          }
+            const sel = $('#filterCode');
+            const prevSel = sel.val();
+            sel.empty(); sel.append(new Option('(all)',''));
+          if(codeCol !== null){
+            const vals = new Set();
+            rows.forEach(r=>{ try{ const v = (r[codeCol] || '').toString().trim(); if(v) vals.add(v); }catch(e){} });
+            Array.from(vals).sort().forEach(v=> sel.append(new Option(v, v)));
+          // restore previous selection if still present
+          try{ if(prevSel && sel.find(`option[value="${prevSel}"]`).length) sel.val(prevSel); }catch(e){}
+          }
+        }catch(e){ console.debug('Failed to populate requirement select', e); }
+
+        // if a specific code selected, filter rows to matches
+        const selectedCode = $('#filterCode').val() || '';
+        if(selectedCode){
+          const norm = selectedCode.trim().toLowerCase();
+          const filtered = [];
+          rows.forEach((r, originalIdx) => {
+            const matches = headers.some((h,ci)=>{ try{ const cell = (r[ci]||'').toString().trim().toLowerCase(); return cell === norm; }catch(e){return false;} });
+            if (matches) {
+              // Attach original index to each row so we can save to correct sheet row
+              r.__originalIndex = originalIdx;
+              filtered.push(r);
+            }
+          });
+          if(filtered.length > 0) rows = filtered;
+        }
+
+        renderItem(0);
+      },
+      error: function(){ alert('Error loading sheet'); }
+    });
+  }
+
+  // Populate sheet select using CAP tabs endpoint if available
+  $.ajax({ url: '{{ url_for("admin.ai_engine.cap_cus_sheet_tabs") }}', success: function(resp){
+    const sheets = resp && resp.sheets ? resp.sheets.map(s=>s.title) : [CAP_SHEET_NAME];
+    const sel = $('#sheetSelect'); sel.empty(); sheets.forEach(s=> sel.append(new Option(s,s)));
+    sel.val(CAP_SHEET_NAME);
+  }, error:function(){ $('#sheetSelect').append(new Option(CAP_SHEET_NAME, CAP_SHEET_NAME)); }});
+
+  // When user changes selected sheet, reload it to refresh Requirement ID list
+  $('#sheetSelect').change(function(){ loadSheet($('#sheetSelect').val()); });
+
+  $('#loadBtn').click(function(){ loadSheet($('#sheetSelect').val()); });
+  $('#prevBtn').click(function(){ renderItem(index-1); });
+  $('#nextBtn').click(function(){ renderItem(index+1); });
+  // do not auto-reload when filter changes; user should click Load to apply
+
+  // Auto-load sheet on open
+  loadSheet(CAP_SHEET_NAME);
+
+  // Save comment handler
+  $('#saveCommentBtn').click(function(){
+    if(!rows || rows.length === 0) return alert('No rows loaded');
+    const comment = $('#commentsText').val() || '';
+    // Use the stored original row index (or fall back to current index if not filtered)
+    const originalRowIndex = window.__current_sheet_row_index !== undefined ? window.__current_sheet_row_index : index;
+    // compute actual sheet row number (1-based): header_row_index + 2 + original_row_index
+    const headerIdx = window.__cap_header_row_index || 0;
+    const sheetRow = headerIdx + 2 + originalRowIndex;
+    const payload = { row_index: sheetRow, comment: comment, sheet: $('#sheetSelect').val() || CAP_SHEET_NAME };
+    $.ajax({
+      url: '{{ url_for("admin.ai_engine.cap_compliance_update_comment") }}',
+      method: 'POST',
+      contentType: 'application/json',
+      data: JSON.stringify(payload),
+      success: function(resp){
+        if(resp && resp.success){
+          // also update local rows cache if Comments column exists, else reload sheet
+          const commentsIdx = headers.findIndex(h => String(h||'').trim().toLowerCase() === 'comments');
+          if(commentsIdx >= 0){ rows[index][commentsIdx] = comment; }
+          else { loadSheet($('#sheetSelect').val()); }
+          alert('Comment saved');
+        } else {
+          alert('Failed to save comment: ' + (resp && resp.error ? resp.error : 'unknown'));
+        }
+      },
+      error: function(xhr){ alert('Error saving comment'); }
+    });
+  });
+});
+</script>
+
+{% endblock %}

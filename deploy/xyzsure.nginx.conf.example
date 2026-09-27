@@ -1,0 +1,48 @@
+# xyzsure.com — XYZSure AI Compliance (same VM as LIMS, separate Gunicorn socket)
+#
+# DNS: point xyzsure.com (and www) A/AAAA (or CNAME) at this VM / Cloudflare.
+# TLS (example with certbot):
+#   sudo certbot --nginx -d xyzsure.com -d www.xyzsure.com
+#
+# Install:
+#   sudo cp deploy/xyzsure.nginx.conf.example /etc/nginx/sites-available/xyzsure
+#   sudo ln -sf /etc/nginx/sites-available/xyzsure /etc/nginx/sites-enabled/xyzsure
+#   sudo nginx -t && sudo systemctl reload nginx
+
+upstream xyzsure_app {
+    server unix:/usr/xyz_tools/xyzsure/xyzsure.sock fail_timeout=0;
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name xyzsure.com www.xyzsure.com;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name xyzsure.com www.xyzsure.com;
+
+    # Replace with certbot paths after issuing certificates
+    ssl_certificate /etc/letsencrypt/live/xyzsure.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/xyzsure.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 50M;
+
+    access_log /usr/xyz_tools/xyzsure/nginx.access.log;
+    error_log /usr/xyz_tools/xyzsure/nginx.error.log;
+
+    location / {
+        proxy_pass http://xyzsure_app;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+        proxy_connect_timeout 75s;
+    }
+}

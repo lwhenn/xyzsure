@@ -1,0 +1,20 @@
+{
+  "lab_name": "Example Clinical Laboratory",
+  "director_name": "Jane Smith",
+  "director_title": "HCLD",
+  "lap_number": "1234567",
+  "platforms": ["AU680 chemistry", "LC-MS steroid panel"],
+  "document_prefixes": ["0EH", "EA", "EJ", "EL", "EG"],
+  "evidence_paths": [
+    "G:\\Shared drives\\Laboratory inspection packet"
+  ],
+  "default_owners": {
+    "default": "Lab Director",
+    "qa": "QA",
+    "hcld": "HCLD",
+    "technical": "Lab Director"
+  },
+  "jurisdiction_notes": [
+    "California-specific personnel requirements may be N/A for remote/kit collection model."
+  ]
+}

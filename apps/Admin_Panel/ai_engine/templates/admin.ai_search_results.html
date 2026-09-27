@@ -1,0 +1,418 @@
+{% extends 'ai_compliance.base.html' %}
+
+{% block title %}CAP Compliance Results{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h1><i class="bi bi-file-earmark-spreadsheet"></i> AI Search Results</h1>
+            <p class="lead">AI compliance check results, linked to the CAP custom requirement sheet.</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex mb-3 align-items-start">
+                <div id="tabsContainer" class="me-3 flex-grow-1"></div>
+                <div class="btn-toolbar">
+                    <div class="btn-group me-2">
+                        <button id="btnNonCompliantReport" class="btn btn-warning btn-sm">Non-Compliant and Warning Report</button>
+                        <button id="btnNonCompliantPdf" class="btn btn-outline-secondary btn-sm">Download PDF</button>
+                    </div>
+                </div>
+            </div>
+            <div id="sheetContent">Loading...</div>
+        </div>
+    </div>
+
+    <style>
+    /* Scrollable table container with sticky header */
+    .cap-table-container {
+        position: relative;
+        max-height: 80vh; /* adjust as needed */
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .cap-table-container table {
+        min-width: 1100px; /* force horizontal scroll when many columns */
+    }
+    .cap-table-container thead th {
+        position: sticky;
+        top: 0;
+        background: var(--bs-body-bg, #fff);
+        z-index: 2000; /* high to sit above body cells */
+        box-shadow: 0 2px 2px rgba(0,0,0,0.05);
+        -webkit-backface-visibility: hidden;
+        backface-visibility: hidden;
+        background-clip: padding-box;
+    }
+    </style>
+</div>
+
+<script>
+// Load sheet tabs then render as Bootstrap pills/tabs
+async function loadSheetTabs(){
+    const res = await fetch('{{ url_for("admin.ai_engine.cap_cus_sheet_tabs") }}');
+    const data = await res.json();
+    if(!data.success){
+        document.getElementById('tabsContainer').innerHTML = '<div class="alert alert-warning">'+(data.error||'Could not load sheet tabs')+'</div>';
+        return;
+    }
+    const sheets = data.sheets || [];
+    if(sheets.length === 0){
+        document.getElementById('tabsContainer').innerHTML = '<div class="alert alert-info">No sheets found in CAP spreadsheet.</div>';
+        return;
+    }
+    let html = '<ul class="nav nav-pills mb-3" id="capSheetTabs">';
+    sheets.forEach((s, idx)=>{
+        const active = idx===0? 'active':'';
+        html += `<li class="nav-item"><a href="#" class="nav-link ${active}" data-sheet="${encodeURIComponent(s.title)}">${s.title}</a></li>`;
+    });
+    html += '</ul>';
+    document.getElementById('tabsContainer').innerHTML = html;
+
+    // Attach click handlers
+    document.querySelectorAll('#capSheetTabs a').forEach(a=>{
+        a.addEventListener('click', async (ev)=>{
+            ev.preventDefault();
+            document.querySelectorAll('#capSheetTabs a').forEach(x=>x.classList.remove('active'));
+            a.classList.add('active');
+            const sheet = decodeURIComponent(a.getAttribute('data-sheet'));
+            await loadSheet(sheet);
+        });
+    });
+
+    // Load first sheet by default
+    await loadSheet(sheets[0].title);
+}
+
+async function loadSheet(sheet){
+    document.getElementById('sheetContent').innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+    try{
+        const q = '{{ url_for("admin.ai_engine.cap_compliance_sheet") }}' + '?sheet=' + encodeURIComponent(sheet);
+        const r = await fetch(q);
+        const j = await r.json();
+        if(!j.success){
+            document.getElementById('sheetContent').innerHTML = '<div class="alert alert-danger">'+(j.error||'Failed to load sheet')+'</div>';
+            return;
+        }
+        let headers = j.headers || [];
+        let rows = j.rows || [];
+        const headerRowIndex = (typeof j.header_row_index === 'number') ? j.header_row_index : 0;
+
+        // Remove unwanted columns
+        const columnsToRemove = new Set(['Details', 'Findings', 'AI Recommendations', 'Records', 'SOP_Evidence', 'Onsite_Evidence', 'Follow-up', 'Follow-up Evidence']);
+        const columnIndexesToRemove = new Set(headers.map((h, idx) => columnsToRemove.has(h) ? idx : -1).filter(idx => idx !== -1));
+        headers = headers.filter(h => !columnsToRemove.has(h));
+        rows = rows.map(rw => rw.filter((cell, idx) => !columnIndexesToRemove.has(idx)));
+        // use cap-table-container for vertical + horizontal scrolling with sticky header
+        let table = '<div class="cap-table-container"><table id="capComplianceTable" class="table table-sm table-striped table-bordered"><thead><tr>';
+        headers.forEach(h=> table += `<th>${h||''}</th>`);
+        table += '</tr></thead><tbody>';
+        rows.forEach(rw=>{
+            table += '<tr>';
+            rw.forEach(cell=> table += `<td>${cell||''}</td>`);
+            table += '</tr>';
+        });
+        table += '</tbody></table></div>';
+        document.getElementById('sheetContent').innerHTML = table;
+
+        // Ensure there is a Comments column before initializing DataTables so column indexes match
+        let commentsColIndex = headers.findIndex(h=> (h||'').toLowerCase().trim() === 'comments');
+        if(commentsColIndex === -1){
+            // add header to JS headers array and DOM
+            headers.push('Comments');
+            const thead = document.querySelector('#capComplianceTable thead tr');
+            const th = document.createElement('th'); th.textContent = 'Comments'; thead.appendChild(th);
+            // add empty cells to each body row
+            document.querySelectorAll('#capComplianceTable tbody tr').forEach(tr=>{
+                const td = document.createElement('td'); td.textContent = ''; tr.appendChild(td);
+            });
+            commentsColIndex = headers.length - 1; // new last column
+        }
+
+        // Initialize DataTables with sorting and column reordering (ColReorder)
+        try{
+            if(window.jQuery && $.fn.dataTable){
+                // Default sort: Date (latest first), then Requirement/ID (A→Z)
+                const normHeaders = (headers || []).map(h => (h || '').toString().toLowerCase().trim());
+                let dateColIndex = normHeaders.findIndex(h => h === 'date' || h === 'report date' || h === 'report_date' || h === 'timestamp');
+                if(dateColIndex === -1){
+                    dateColIndex = normHeaders.findIndex(h => h.includes('date'));
+                }
+                let reqColIndex = normHeaders.findIndex(h => h.includes('requirement') && h.includes('id'));
+                if(reqColIndex === -1){
+                    reqColIndex = normHeaders.findIndex(h => h === 'requirement (id)' || h === 'requirement id');
+                }
+                if(reqColIndex === -1){
+                    reqColIndex = normHeaders.findIndex(h => h === 'requirement' || h.includes('requirement'));
+                }
+                if(reqColIndex === -1){
+                    reqColIndex = normHeaders.findIndex(h => h === 'id' || h.includes('checklist') || h.includes('item'));
+                }
+
+                // Enable robust date parsing for sorting if the moment plugin is present
+                try{
+                    if($.fn.dataTable.moment){
+                        ['YYYY/MM/DD HH:mm:ss','YYYY-MM-DD HH:mm:ss','YYYY-MM-DD','MM/DD/YYYY HH:mm:ss','MM/DD/YYYY'].forEach(fmt => {
+                            try{ $.fn.dataTable.moment(fmt); }catch(e){ /* ignore */ }
+                        });
+                    }
+                }catch(e){ /* ignore */ }
+
+                const defaultOrder = [];
+                if(dateColIndex !== -1){ defaultOrder.push([dateColIndex, 'desc']); }
+                if(reqColIndex !== -1 && reqColIndex !== dateColIndex){ defaultOrder.push([reqColIndex, 'asc']); }
+
+                // Destroy existing instance if present
+                if($.fn.dataTable.isDataTable('#capComplianceTable')){
+                    $('#capComplianceTable').DataTable().destroy();
+                }
+                $('#capComplianceTable').DataTable({
+                    paging: false,
+                    searching: false,
+                    info: false,
+                    // Use our own `.cap-table-container` for scrolling so CSS sticky headers work.
+                    autoWidth: false,
+                    colReorder: true,
+                    order: defaultOrder,
+                });
+            }
+        }catch(err){
+            console.warn('DataTables init failed', err);
+        }
+
+        // Create a cloned header overlay to ensure header stays visible and clickable in Edge
+        (function createClonedHeader(){
+            const container = document.querySelector('.cap-table-container');
+            const table = document.getElementById('capComplianceTable');
+            if(!container || !table) return;
+
+            // remove existing clone if present and restore original header visibility
+            const existing = container.querySelector('.cloned-header-wrapper');
+            if(existing){
+                const origThead = table.querySelector('thead');
+                if(origThead) origThead.style.visibility = '';
+                existing.remove();
+            }
+
+            const colgroup = table.querySelector('colgroup');
+            const thead = table.querySelector('thead');
+            if(!thead) return;
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'cloned-header-wrapper';
+            wrapper.style.position = 'absolute';
+            wrapper.style.top = '0';
+            wrapper.style.left = '0';
+            wrapper.style.right = '0';
+            wrapper.style.overflow = 'hidden';
+            wrapper.style.pointerEvents = 'auto';
+            wrapper.style.zIndex = 3000;
+
+            const cloneTable = document.createElement('table');
+            cloneTable.className = table.className;
+            cloneTable.style.margin = '0';
+            cloneTable.style.width = table.offsetWidth + 'px';
+
+            // replicate colgroup widths if available
+            if(colgroup){
+                const cg = colgroup.cloneNode(true);
+                // copy computed widths into cloned cols
+                for(let i=0;i<cg.children.length;i++){
+                    const w = colgroup.children[i].getBoundingClientRect().width;
+                    cg.children[i].style.width = w + 'px';
+                }
+                cloneTable.appendChild(cg);
+            }
+
+            const theadClone = thead.cloneNode(true);
+            cloneTable.appendChild(theadClone);
+            wrapper.appendChild(cloneTable);
+            container.appendChild(wrapper);
+
+            // hide the original thead but keep its layout space so there's no jump
+            try{
+                thead.style.visibility = 'hidden';
+            }catch(e){/* ignore */}
+
+            // keep clone positioned on scroll
+            function updateClone(){
+                const scrollLeft = container.scrollLeft;
+                wrapper.style.transform = `translateY(${container.scrollTop}px)`;
+                cloneTable.style.transform = `translateX(${-scrollLeft}px)`;
+                // match widths
+                cloneTable.style.width = table.offsetWidth + 'px';
+            }
+            updateClone();
+            container.addEventListener('scroll', updateClone);
+            window.addEventListener('resize', ()=>{
+                // recalc col widths
+                if(colgroup && cloneTable.querySelector('colgroup')){
+                    for(let i=0;i<colgroup.children.length;i++){
+                        const w = colgroup.children[i].getBoundingClientRect().width;
+                        cloneTable.querySelector('colgroup').children[i].style.width = w + 'px';
+                    }
+                }
+                updateClone();
+            });
+
+            // delegate clicks on cloned header to original table for sorting
+            try{
+                const dt = window.jQuery && $.fn.dataTable && $.fn.dataTable.isDataTable('#capComplianceTable') ? $('#capComplianceTable').DataTable() : null;
+                if(dt){
+                    const cloneThs = cloneTable.querySelectorAll('thead th');
+                    cloneThs.forEach((th, idx)=>{
+                        th.style.cursor = 'pointer';
+                        th.addEventListener('click', ()=>{
+                            // toggle order
+                            const current = dt.order();
+                            let dir = 'asc';
+                            if(current && current.length>0 && current[0][0]===idx && current[0][1]==='asc') dir='desc';
+                            dt.order([idx, dir]).draw(false);
+                        });
+                    });
+                }
+            }catch(e){
+                // ignore
+            }
+        })();
+
+        // Add column resize handles and behavior (no extra libs)
+        (function enableColResize(){
+            const table = document.getElementById('capComplianceTable');
+            if(!table) return;
+
+            // Ensure table has a colgroup we can manipulate
+            let colgroup = table.querySelector('colgroup');
+            const ths = table.querySelectorAll('thead th');
+            if(!colgroup){
+                colgroup = document.createElement('colgroup');
+                for(let i=0;i<ths.length;i++){
+                    const col = document.createElement('col');
+                    colgroup.appendChild(col);
+                }
+                table.insertBefore(colgroup, table.firstChild);
+            }
+
+            // initialize widths from header cells
+            function setInitialColWidths(){
+                for(let i=0;i<ths.length;i++){
+                    const w = ths[i].offsetWidth;
+                    colgroup.children[i].style.width = w + 'px';
+                }
+            }
+            setInitialColWidths();
+
+            // create resize handle for each th
+            ths.forEach((th, idx)=>{
+                // skip if already has handle
+                if(th.querySelector('.col-resizer')) return;
+                th.style.position = 'relative';
+                const handle = document.createElement('div');
+                handle.className = 'col-resizer';
+                handle.style.position = 'absolute';
+                handle.style.top = '0';
+                handle.style.right = '0';
+                handle.style.width = '6px';
+                handle.style.cursor = 'col-resize';
+                handle.style.userSelect = 'none';
+                handle.style.height = '100%';
+                handle.style.zIndex = 6;
+                th.appendChild(handle);
+
+                let startX, startWidth;
+                function onMouseMove(e){
+                    const dx = e.clientX - startX;
+                    const newW = Math.max(40, startWidth + dx);
+                    colgroup.children[idx].style.width = newW + 'px';
+                }
+                function onMouseUp(){
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                }
+                handle.addEventListener('mousedown', function(e){
+                    e.preventDefault();
+                    startX = e.clientX;
+                    // get current computed width from col
+                    startWidth = colgroup.children[idx].offsetWidth || th.offsetWidth;
+                    document.addEventListener('mousemove', onMouseMove);
+                    document.addEventListener('mouseup', onMouseUp);
+                });
+            });
+
+            // update widths on window resize to keep proportions
+            window.addEventListener('resize', ()=>{
+                // don't overwrite explicit widths set by user; only set initial once
+            });
+        })();
+        
+
+        // Track edits as [{row:rowIndex, col:colIndex, value:val}]
+        window._capComplianceEdits = window._capComplianceEdits || [];
+
+        // Make Comments column contenteditable
+        document.querySelectorAll('#capComplianceTable tbody tr').forEach((tr, rIdx)=>{
+            const td = tr.children[commentsColIndex];
+            if(!td) return;
+            td.contentEditable = true;
+            td.addEventListener('input', ()=>{
+                // store edit (row index relative to returned rows)
+                const val = td.textContent || '';
+                // replace existing for same row/col
+                window._capComplianceEdits = (window._capComplianceEdits||[]).filter(e=>!(e.row===rIdx && e.col===commentsColIndex));
+                window._capComplianceEdits.push({row: rIdx, col: commentsColIndex, value: val});
+            });
+        });
+
+        // On page unload, POST edits to server if any
+        window.addEventListener('beforeunload', function(e){
+            if(!window._capComplianceEdits || window._capComplianceEdits.length===0) return;
+            // Send synchronously where possible using navigator.sendBeacon
+            const payload = {sheet: j.sheet, header_row_index: headerRowIndex, updates: window._capComplianceEdits};
+            try{
+                const url = '{{ url_for("admin.ai_engine.cap_compliance_sheet_update") }}';
+                const blob = new Blob([JSON.stringify(payload)], {type: 'application/json'});
+                if(navigator.sendBeacon){
+                    navigator.sendBeacon(url, blob);
+                } else {
+                    // fallback synchronous XHR
+                    var req = new XMLHttpRequest();
+                    req.open('POST', url, false);
+                    req.setRequestHeader('Content-Type', 'application/json');
+                    req.send(JSON.stringify(payload));
+                }
+            }catch(err){
+                console.warn('Failed to persist CAP sheet edits on unload', err);
+            }
+        });
+    }catch(e){
+        document.getElementById('sheetContent').innerHTML = '<div class="alert alert-danger">Error loading sheet: '+e.toString()+'</div>';
+    }
+}
+
+// Initialize
+loadSheetTabs();
+
+// Wire report buttons to open report for the active sheet
+document.addEventListener('click', function initReportButtons(){
+    const rpt = document.getElementById('btnNonCompliantReport');
+    const pdf = document.getElementById('btnNonCompliantPdf');
+    if(!rpt || !pdf) return;
+    rpt.addEventListener('click', ()=>{
+        const active = document.querySelector('#capSheetTabs a.active');
+        const sheet = active ? decodeURIComponent(active.getAttribute('data-sheet')) : '{{ CAP_SHEET_NAME }}';
+        window.open('{{ url_for("admin.ai_engine.cap_noncompliant_report") }}' + '?sheet=' + encodeURIComponent(sheet), '_blank');
+    });
+    pdf.addEventListener('click', ()=>{
+        const active = document.querySelector('#capSheetTabs a.active');
+        const sheet = active ? decodeURIComponent(active.getAttribute('data-sheet')) : '{{ CAP_SHEET_NAME }}';
+        window.open('{{ url_for("admin.ai_engine.cap_noncompliant_report_pdf") }}' + '?sheet=' + encodeURIComponent(sheet), '_blank');
+    });
+    // remove this listener after wiring
+    document.removeEventListener('click', initReportButtons);
+});
+</script>
+
+{% endblock %}
