@@ -126,7 +126,7 @@ def exit_demo():
     logout_user()
     session.pop(_SESSION_CODE, None)
     session.pop(_SESSION_STARTED, None)
-    return redirect(url_for("how_it_works"))
+    return redirect(url_for("index"))
 
 
 @demo.route("/document/<slug>", methods=["GET"])

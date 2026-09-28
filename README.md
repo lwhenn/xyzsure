@@ -111,7 +111,7 @@ DEMO_ACCESS_CODES=acme-lab-7f3k2,trade-show-q4-9xw1
 DEMO_SESSION_HOURS=8
 ```
 
-Share `https://xyzsure.com/demo/<code>`, or have prospects type the code into the **Try the demo** box on the sign-in page (shown only when codes are configured). An unknown code in the link returns 404. Removing a code from `DEMO_ACCESS_CODES` (and restarting) ends every session that used it. Each visit is logged as `Demo session started (code=...)`.
+Share `https://xyzsure.com/demo/<code>`, or have prospects type the code into the **Try the demo** box on the sign-in page (shown only when codes are configured). An unknown code in the link returns 404. **Exit demo** ends the session and returns to the sign-in page. Removing a code from `DEMO_ACCESS_CODES` (and restarting) ends every session that used it. Each visit is logged as `Demo session started (code=...)`.
 
 Sample content lives in `apps/demo/sample_data.py`. Keep it fictional, and paraphrase checklist wording rather than copying licensed text.
 
