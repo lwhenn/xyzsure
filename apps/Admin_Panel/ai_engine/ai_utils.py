@@ -43,6 +43,13 @@ GCS_PATH_MAPPING_FILE = os.path.join(MODULE_ROOT, "data", "gcs_path_link_mapping
 
 
 # === AI ENGINE FILE STORAGE FUNCTIONS ===
+# Demo sessions must never read or write the real report files.
+
+def _demo_active():
+    from apps.demo import is_demo_session
+
+    return is_demo_session()
+
 
 def _ensure_ai_reports_store():
     """Ensure the AI reports storage directory exists."""
@@ -55,6 +62,10 @@ def _load_ai_reports():
     Returns:
         list: List of AI search reports, or empty list if file doesn't exist or on error
     """
+    if _demo_active():
+        from apps.demo.sample_data import search_reports
+
+        return search_reports()
     _ensure_ai_reports_store()
     try:
         if not os.path.exists(AI_SEARCH_REPORTS_FILE):
@@ -75,6 +86,8 @@ def _save_ai_reports(reports):
     Returns:
         bool: True if successful, False otherwise
     """
+    if _demo_active():
+        return False
     _ensure_ai_reports_store()
     try:
         with open(AI_SEARCH_REPORTS_FILE, "w", encoding="utf-8") as fh:
@@ -91,6 +104,10 @@ def _ensure_gap_analysis_reports_store():
 
 def _load_gap_analysis_reports():
     """Load AI gap analysis reports from persistent storage."""
+    if _demo_active():
+        from apps.demo.sample_data import gap_analysis_reports
+
+        return gap_analysis_reports()
     _ensure_gap_analysis_reports_store()
     try:
         if not os.path.exists(AI_GAP_ANALYSIS_REPORTS_FILE):
@@ -104,6 +121,8 @@ def _load_gap_analysis_reports():
 
 def _save_gap_analysis_reports(reports):
     """Save AI gap analysis reports to persistent storage."""
+    if _demo_active():
+        return False
     _ensure_gap_analysis_reports_store()
     try:
         with open(AI_GAP_ANALYSIS_REPORTS_FILE, "w", encoding="utf-8") as fh:

@@ -5,8 +5,10 @@
 #   sudo certbot --nginx -d xyzsure.com -d www.xyzsure.com
 #
 # Install:
-#   sudo cp deploy/xyzsure.nginx.conf.example /etc/nginx/sites-available/xyzsure
-#   sudo ln -sf /etc/nginx/sites-available/xyzsure /etc/nginx/sites-enabled/xyzsure
+#   sudo cp deploy/xyzsure.nginx.conf.example /etc/nginx/sites-available/xyzsure.conf
+#   sudo ln -sf /etc/nginx/sites-available/xyzsure.conf /etc/nginx/sites-enabled/xyzsure.conf
+#   The VM's nginx.conf includes each site by name, so also add inside the http block:
+#     include /etc/nginx/sites-enabled/xyzsure.conf;
 #   sudo nginx -t && sudo systemctl reload nginx
 
 upstream xyzsure_app {

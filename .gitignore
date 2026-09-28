@@ -10,3 +10,5 @@ __pycache__/
 *.log
 .DS_Store
 Thumbs.db
+LIMS API.md
+LIMS API.pdf

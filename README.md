@@ -102,6 +102,19 @@ flask --app app.py run --debug --host 0.0.0.0 --port 8090
 
 Open http://localhost:8090/ → sign in → AI Compliance.
 
+## Demo mode (for prospects)
+
+Give prospects a link that opens the real AI Compliance screens filled with sample data for a fictional laboratory ("Riverbend Clinical Laboratory"). No sign-in is needed. Demo sessions make no Google, Discovery Engine, LLM, LIMS, or database calls, never read or write the saved report files, and any endpoint not explicitly allowed is refused.
+
+```env
+DEMO_ACCESS_CODES=acme-lab-7f3k2,trade-show-q4-9xw1
+DEMO_SESSION_HOURS=8
+```
+
+Share `https://xyzsure.com/demo/<code>`, or have prospects type the code into the **Try the demo** box on the sign-in page (shown only when codes are configured). An unknown code in the link returns 404. Removing a code from `DEMO_ACCESS_CODES` (and restarting) ends every session that used it. Each visit is logged as `Demo session started (code=...)`.
+
+Sample content lives in `apps/demo/sample_data.py`. Keep it fictional, and paraphrase checklist wording rather than copying licensed text.
+
 ## Production deploy (same VM as LIMS)
 
 XYZSure is a **second Flask/Gunicorn process** next to LIMS. They do not share a socket or port.
@@ -120,7 +133,7 @@ nginx routes by `server_name`; each upstream points at its own Unix socket. Temp
 3. Google OAuth: add redirect URIs  
    `https://xyzsure.com/google/authorize/callback` and  
    `https://xyzsure.com/google/login/callback`.
-4. Install systemd + nginx examples above; issue TLS for `xyzsure.com`; `systemctl enable --now xyzsure`; reload nginx.
+4. Install systemd + nginx examples above; issue TLS for `xyzsure.com`; `systemctl enable --now xyzsure`; reload nginx. The nginx site file is `/etc/nginx/sites-available/xyzsure.conf` (symlinked into `sites-enabled/`). This VM's `nginx.conf` lists sites explicitly, so add `include /etc/nginx/sites-enabled/xyzsure.conf;` next to the other site includes.
 5. DNS / Cloudflare: point `xyzsure.com` at the same VM.
 
 Do **not** run production with `python app.py` / Flask debug. Use Gunicorn via systemd.

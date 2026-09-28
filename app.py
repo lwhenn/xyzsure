@@ -68,14 +68,14 @@ Session(app)
 
 # Blueprints — AI Compliance only
 from apps.Admin_Panel import admin  # noqa: E402
-from apps.Admin_Panel.ai_engine.ai_engine import ai_engine  # noqa: E402
 from apps.Admin_Panel.ai_compliance import ai_compliance  # noqa: E402
 from apps import Google_API  # noqa: E402
+from apps.demo import DEMO_USER_ID, init_demo, load_demo_user  # noqa: E402
 
 app.register_blueprint(admin)
-app.register_blueprint(ai_engine)
 app.register_blueprint(ai_compliance)
 app.register_blueprint(Google_API.google_api)
+init_demo(app)
 
 # Probe external LIMS API + local ORM once at startup (disables UI checkbox if neither works).
 try:
@@ -94,6 +94,8 @@ except Exception as _lims_exc:
 
 @login_manager.user_loader
 def load_user(user_id):
+    if user_id == DEMO_USER_ID:
+        return load_demo_user(user_id)
     for _ in range(2):
         try:
             return db_session.get(User, user_id)
@@ -235,9 +237,14 @@ def check_load_creds():
         "how_it_works",
         "static",
         "google_api.login_callback",
+        "demo.enter",
+        "demo.enter_with_form",
+        "demo.exit_demo",
     }
 
     if user_is_authenticated:
+        if getattr(current_user, "is_demo", False):
+            return
         if request.endpoint not in (
             "google_api.authorize",
             "google_api.authorize_callback",

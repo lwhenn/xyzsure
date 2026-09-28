@@ -2596,6 +2596,39 @@ def _filter_reports_for_current_user(reports):
     return filtered
 
 
+def _current_user_is_admin():
+    return bool(
+        current_user
+        and getattr(current_user, "is_authenticated", False)
+        and "admin" in (getattr(current_user, "roles_list", None) or [])
+    )
+
+
+def _current_user_can_delete_report(report):
+    """Admins may delete any report; everyone else only reports they saved."""
+    if not current_user or not getattr(current_user, "is_authenticated", False):
+        return False
+    if _current_user_is_admin():
+        return True
+    user_display, user_id = _current_user_report_identity()
+    if report.get("user_id") is not None:
+        return user_id is not None and str(report.get("user_id")) == str(user_id)
+    return user_display != "anonymous" and str(report.get("user")) == str(user_display)
+
+
+def _delete_saved_report(report_id, load_reports, save_reports):
+    reports = load_reports() or []
+    target = next((r for r in reports if str(r.get("id")) == str(report_id)), None)
+    if target is None or not (_current_user_is_admin() or _filter_reports_for_current_user([target])):
+        return jsonify({"success": False, "error": "Report not found"}), 404
+    if not _current_user_can_delete_report(target):
+        return jsonify({"success": False, "error": "You can only delete reports you saved"}), 403
+    new_reports = [r for r in reports if str(r.get("id")) != str(report_id)]
+    if not save_reports(new_reports):
+        return jsonify({"success": False, "error": "Failed to delete report"}), 500
+    return jsonify({"success": True})
+
+
 def _dedupe_saved_report_documents(report_obj, *, preserve_gap_fields=False):
     """Normalize document lists on a saved report payload."""
 
@@ -2747,13 +2780,7 @@ def ai_gap_analysis_reports():
 @login_required
 def delete_gap_analysis_report(report_id):
     try:
-        reports = _load_gap_analysis_reports()
-        new_reports = [r for r in reports if int(r.get("id")) != int(report_id)]
-        if len(new_reports) == len(reports):
-            return jsonify({"success": False, "error": "Report not found"}), 404
-        if not _save_gap_analysis_reports(new_reports):
-            return jsonify({"success": False, "error": "Failed to delete report"}), 500
-        return jsonify({"success": True})
+        return _delete_saved_report(report_id, _load_gap_analysis_reports, _save_gap_analysis_reports)
     except Exception as e:
         logger.error(f"Error in delete_gap_analysis_report endpoint: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
@@ -2954,14 +2981,7 @@ def ai_search_reports():
 @login_required
 def delete_ai_report(report_id):
     try:
-        reports = _load_ai_reports()
-        new_reports = [r for r in reports if int(r.get("id")) != int(report_id)]
-        if len(new_reports) == len(reports):
-            return jsonify({"success": False, "error": "Report not found"}), 404
-        ok = _save_ai_reports(new_reports)
-        if not ok:
-            return jsonify({"success": False, "error": "Failed to delete report"}), 500
-        return jsonify({"success": True})
+        return _delete_saved_report(report_id, _load_ai_reports, _save_ai_reports)
     except Exception as e:
         logger.error(f"Error in delete_ai_report endpoint: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
@@ -5146,7 +5166,7 @@ def _find_saved_report_by_id(report_id, report_type=None):
         loaders = [_load_ai_reports, _load_gap_analysis_reports]
 
     for loader in loaders:
-        for entry in loader() or []:
+        for entry in _filter_reports_for_current_user(loader()):
             try:
                 if int(entry.get("id", -1)) == int(report_id):
                     return _unwrap_saved_report_payload(entry.get("report") or entry)
@@ -5553,7 +5573,7 @@ def export_all_reports_pdf():
             local_reports = data.get("local_reports") or []
             reports = list(reports) + list(local_reports)
         else:
-            reports = data.get("reports") or _load_ai_reports() or []
+            reports = data.get("reports") or _filter_reports_for_current_user(_load_ai_reports())
 
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet

@@ -701,7 +701,7 @@ $(document).ready(function() {
     // Load inspection sheet to get working document links
     function loadInspectionSheetLinks() {
         $.ajax({
-            url: '/ai-engine/inspection-sheet',
+            url: '{{ url_for("admin.ai_engine.get_inspection_sheet") }}',
             method: 'GET',
             success: function(resp) {
                 if (resp.success && resp.data && resp.data.length > 0) {
@@ -4700,7 +4700,11 @@ $(document).ready(function() {
                 } catch (e) { /* ignore */ }
                 populateSavedReports();
             },
-            error: function() {
+            error: function(xhr) {
+                if (xhr && xhr.status === 403) {
+                    alert((xhr.responseJSON && xhr.responseJSON.error) || 'You can only delete reports you saved.');
+                    return;
+                }
                 // fallback to local removal and tombstone so export won't re-include server copy
                 let savedReports = JSON.parse(localStorage.getItem(REPORTS_LOCAL_KEY) || '[]');
                 savedReports = savedReports.filter(r => r.id !== reportId);

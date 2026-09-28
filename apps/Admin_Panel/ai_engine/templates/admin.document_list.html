@@ -213,7 +213,7 @@ $(document).ready(function() {
     // Load inspection sheet on page load
     function loadInspectionSheet() {
         $.ajax({
-            url: '/ai-engine/inspection-sheet',
+            url: '{{ url_for("admin.ai_engine.get_inspection_sheet") }}',
             method: 'GET',
             success: function(resp) {
                 if (resp.success && resp.data && resp.data.length > 0) {
@@ -258,7 +258,7 @@ $(document).ready(function() {
     
     // Fetch and display service account email for Shared Drive help
     $.ajax({
-        url: '/ai-engine/api/google-service-account-email',
+        url: '{{ url_for("admin.ai_engine.get_google_service_account_email") }}',
         method: 'GET',
         success: function(resp) {
             if (resp.email) {
@@ -442,7 +442,7 @@ $(document).ready(function() {
         saveButton.prop('disabled', true).text('Saving...').html('<i class="bi bi-hourglass-split"></i> Saving...');
 
         $.ajax({
-            url: '/ai-engine/inspection-sheet/save',
+            url: '{{ url_for("admin.ai_engine.save_inspection_sheet") }}',
             type: 'POST',
             contentType: 'application/json',
             data: JSON.stringify({

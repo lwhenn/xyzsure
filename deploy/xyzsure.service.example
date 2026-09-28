@@ -11,11 +11,12 @@ Description=Gunicorn instance for XYZSure (AI Compliance)
 After=network.target
 
 [Service]
-User=administrator
+# Must be an existing account that owns /usr/xyz_tools/xyzsure (check with: id <user>)
+User=linglin
 Group=www-data
 WorkingDirectory=/usr/xyz_tools/xyzsure
 Environment="PATH=/usr/xyz_tools/xyzsure/.venv/bin"
-EnvironmentFile=/usr/xyz_tools/xyzsure/.env
+# .env is loaded by app.py (python-dotenv); systemd EnvironmentFile cannot parse multi-line JSON values.
 # Separate Unix socket from LIMS — do not reuse XYZ-LIMS.sock
 ExecStart=/usr/xyz_tools/xyzsure/.venv/bin/gunicorn \
   --workers 3 \

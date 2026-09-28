@@ -1,0 +1,25 @@
+{% extends "ai_compliance.base.html" %}
+
+{% block title %}{{ doc.title }} (sample){% endblock %}
+
+{% block content %}
+<div class="card shadow-sm my-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h5 mb-0">{{ doc.title }}</h1>
+            <small class="text-muted">{{ lab_name }} &middot; {{ doc.folder }} &middot; Effective {{ doc.effective }}</small>
+        </div>
+        <span class="badge bg-warning text-dark">Sample document</span>
+    </div>
+    <div class="card-body">
+        {% for paragraph in doc.body %}
+        <p>{{ paragraph }}</p>
+        {% endfor %}
+        <hr>
+        <p class="text-muted small mb-0">
+            This is a short fictional document created for the XYZSure demo. In the full product,
+            this link opens the laboratory's own file in Google Drive.
+        </p>
+    </div>
+</div>
+{% endblock %}

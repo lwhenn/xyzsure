@@ -126,7 +126,9 @@
                         <a class="nav-link" href="{{ url_for('ai_compliance.help_page') }}"><i class="bi bi-question-circle"></i> Help</a>
                     </li>
                     <li class="nav-item">
-                        {% if current_user.is_authenticated %}
+                        {% if is_demo %}
+                        <a type="button" class="btn btn-warning btn-sm" href="{{ url_for('demo.exit_demo') }}" role="button">Exit demo</a>
+                        {% elif current_user.is_authenticated %}
                         <a type="button" class="btn btn-outline-light btn-sm" href="{{ url_for('logout', next='/ai-compliance/') }}" role="button">Logout</a>
                         {% else %}
                         <a type="button" class="btn btn-outline-light btn-sm" href="{{ url_for('index') }}" role="button">Login</a>
@@ -136,6 +138,13 @@
             </div>
         </div>
     </nav>
+    {% endif %}
+    {% if is_demo %}
+    <div class="alert alert-warning rounded-0 border-0 text-center py-2 mb-3" role="status">
+        <strong>Demo mode:</strong> You're viewing sample data for {{ demo_lab_name }}, a fictional laboratory.
+        AI results are pre-recorded and changes are not saved.
+        <a href="mailto:info@xyzlabc.com" class="alert-link ms-1">Talk to us about your lab</a>
+    </div>
     {% endif %}
 
     <div class="container">
