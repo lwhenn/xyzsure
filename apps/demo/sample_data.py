@@ -146,7 +146,7 @@ def _evidence(slug, code, snippet):
 # One entry per checklist requirement shown on the demo Gap Analysis page.
 REQUIREMENTS = [
     {
-        "code": "GEN.13806",
+        "code": "REQ.13806",
         "subject": "Quality Management System Document",
         "label": "The laboratory maintains a document describing its overall quality management system.",
         "evidence_of_compliance": "Current quality manual or equivalent QMS document.",
@@ -163,7 +163,7 @@ REQUIREMENTS = [
         "corrective_actions": ["Continue current practice. Keep QM-001 in the inspection packet."],
     },
     {
-        "code": "GEN.13820",
+        "code": "REQ.13820",
         "subject": "Description of Services",
         "label": (
             "A document describes the services the laboratory offers, including tests offered, "
@@ -187,7 +187,7 @@ REQUIREMENTS = [
         ],
     },
     {
-        "code": "GEN.20100",
+        "code": "REQ.20100",
         "subject": "QMS Scope",
         "label": "The QMS covers every area of the laboratory and all users of its services.",
         "evidence_of_compliance": "QMS document stating scope across sections and service users.",
@@ -205,7 +205,7 @@ REQUIREMENTS = [
         "corrective_actions": ["Continue current practice."],
     },
     {
-        "code": "GEN.20208",
+        "code": "REQ.20208",
         "subject": "Nonconforming Event Recording",
         "label": "The QMS includes a process to identify and record nonconforming events.",
         "evidence_of_compliance": "Written NCE procedure and event log.",
@@ -219,7 +219,7 @@ REQUIREMENTS = [
         "corrective_actions": ["Continue monthly NCE trending per NCE-010."],
     },
     {
-        "code": "GEN.20310",
+        "code": "REQ.20310",
         "subject": "Investigation of Nonconforming Events",
         "label": (
             "Serious events receive a root cause analysis, and the scope of investigation is "
@@ -246,7 +246,7 @@ REQUIREMENTS = [
         ],
     },
     {
-        "code": "GEN.20375",
+        "code": "REQ.20375",
         "subject": "Document Control",
         "label": (
             "Policies and procedures are controlled: approved before use, reviewed on schedule, "
@@ -263,7 +263,7 @@ REQUIREMENTS = [
         "corrective_actions": ["Continue current practice."],
     },
     {
-        "code": "GEN.20377",
+        "code": "REQ.20377",
         "subject": "Record Retention",
         "label": "Records are retained for at least the minimum periods required by the checklist.",
         "evidence_of_compliance": "Retention policy consistent with required retention periods.",
@@ -284,7 +284,7 @@ REQUIREMENTS = [
         ],
     },
     {
-        "code": "GEN.55500",
+        "code": "REQ.55500",
         "subject": "Competency Assessment",
         "label": (
             "Competency of testing personnel is assessed semiannually in the first year and "
@@ -522,11 +522,11 @@ def gap_analysis_reports():
 
 
 def search_reports():
-    subset = [_check(_REQ_BY_CODE[c]) for c in ("GEN.13806", "GEN.13820", "GEN.20208")]
+    subset = [_check(_REQ_BY_CODE[c]) for c in ("REQ.13806", "REQ.13820", "REQ.20208")]
     return copy.deepcopy([
         _entry(
             900000000002,
-            f"GEN.13806, GEN.13820, GEN.20208 - Evidence search (sample)",
+            f"REQ.13806, REQ.13820, REQ.20208 - Evidence search (sample)",
             "2026-09-10T15:05:00+00:00",
             _report(subset, "9/10/2026, 11:05:00 AM"),
         ),
