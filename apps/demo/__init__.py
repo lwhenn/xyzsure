@@ -106,7 +106,7 @@ def enter(code):
 def enter_with_form():
     matched = _matching_code((request.form.get("code") or "").strip())
     if matched is None:
-        flash("That demo code isn't valid. Contact info@xyzlabc.com to request one.", "error")
+        flash("That demo code isn't valid. Contact support@xyzsure.com to request one.", "error")
         return redirect(url_for("index"))
     return _start_session(matched)
 
