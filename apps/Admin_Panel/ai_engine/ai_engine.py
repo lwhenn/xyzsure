@@ -29,7 +29,6 @@ from apps.Admin_Panel.shared_utils import get_val_fuzzy, get_column_letter, find
 
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 ai_engine = Blueprint(
     "ai_engine",

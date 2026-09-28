@@ -71,11 +71,33 @@
       font-size: 1.15rem;
       line-height: 1.5;
     }
-    .intro-link {
-      color: var(--xyz-teal);
-      font-weight: 600;
+    .how-it-works-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.9rem 1.25rem;
+      border-radius: 10px;
+      background: var(--xyz-teal);
+      color: #fff;
       font-size: 1.15rem;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 8px 20px rgba(13, 110, 110, 0.25);
+      transition: background 0.15s ease, transform 0.15s ease;
     }
+    .how-it-works-btn:hover,
+    .how-it-works-btn:focus-visible {
+      background: #1a665d;
+      color: #fff;
+      transform: translateY(-1px);
+      outline: none;
+    }
+    .how-it-works-btn:focus-visible {
+      box-shadow: 0 0 0 3px rgba(13, 110, 110, 0.35);
+    }
+    .how-it-works-btn .bi { transition: transform 0.15s ease; }
+    .how-it-works-btn:hover .bi { transform: translateX(3px); }
     .site-footer {
       margin-top: 2.5rem;
       font-size: 0.9rem;
@@ -129,7 +151,6 @@
           <li>Grounded in how a working CLIA laboratory actually keeps its own program.</li>
           <li>A tool your staff can use day to day, backed by XYZ Laboratory in Lakeway, Texas.</li>
         </ul>
-        <p class="mb-0"><a href="{{ url_for('how_it_works') }}" class="intro-link">See how it works</a></p>
       </div>
 
       <div class="col-lg-5">
@@ -172,6 +193,10 @@
           {% if demo_enabled and not current_user.is_authenticated %}
           <div class="auth-divider">or</div>
 
+          <a href="{{ url_for('how_it_works') }}" class="how-it-works-btn">
+            See how it works <i class="bi bi-arrow-right" aria-hidden="true"></i>
+          </a>
+
           <div class="panel" id="demo">
             <h2 class="h5 mb-2">Try the demo</h2>
             <p class="text-muted small mb-3">
@@ -185,6 +210,10 @@
               <button type="submit" class="btn btn-outline-primary text-nowrap">Open demo</button>
             </form>
           </div>
+          {% else %}
+          <a href="{{ url_for('how_it_works') }}" class="how-it-works-btn">
+            See how it works <i class="bi bi-arrow-right" aria-hidden="true"></i>
+          </a>
           {% endif %}
         </div>
       </div>

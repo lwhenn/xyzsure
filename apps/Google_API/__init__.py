@@ -31,7 +31,6 @@ from database import db_session
 from models.user_role import User
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 SHEETS_API_TIMEOUT_SEC = int(os.getenv("GOOGLE_SHEETS_API_TIMEOUT_SEC", "90"))
 SHEETS_API_MAX_RETRIES = int(os.getenv("GOOGLE_SHEETS_API_MAX_RETRIES", "3"))

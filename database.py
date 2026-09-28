@@ -10,7 +10,6 @@ from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 DB_USERNAME = os.environ.get("POSTGRESQL_USERNAME", None)
 DB_PASSWORD = os.environ.get("POSTGRESQL_PASSWORD", None)

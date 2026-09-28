@@ -17,7 +17,6 @@ import logging
 from apps.Admin_Panel.shared_utils import get_module_root, get_val_fuzzy, ensure_directory_exists
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 # === AI ENGINE CONFIGURATION ===
 # CAP Checklist configuration - using Google Sheets document ID from environment
