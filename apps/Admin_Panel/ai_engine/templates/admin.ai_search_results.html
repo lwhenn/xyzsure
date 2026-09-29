@@ -396,23 +396,23 @@ async function loadSheet(sheet){
 loadSheetTabs();
 
 // Wire report buttons to open report for the active sheet
-document.addEventListener('click', function initReportButtons(){
+(function initReportButtons(){
     const rpt = document.getElementById('btnNonCompliantReport');
     const pdf = document.getElementById('btnNonCompliantPdf');
     if(!rpt || !pdf) return;
-    rpt.addEventListener('click', ()=>{
+    function activeSheet(){
         const active = document.querySelector('#capSheetTabs a.active');
-        const sheet = active ? decodeURIComponent(active.getAttribute('data-sheet')) : '{{ CAP_SHEET_NAME }}';
-        window.open('{{ url_for("admin.ai_engine.cap_noncompliant_report") }}' + '?sheet=' + encodeURIComponent(sheet), '_blank');
+        return active ? decodeURIComponent(active.getAttribute('data-sheet')) : '{{ CAP_SHEET_NAME }}';
+    }
+    rpt.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        window.open('{{ url_for("admin.ai_engine.cap_noncompliant_report") }}' + '?sheet=' + encodeURIComponent(activeSheet()), '_blank');
     });
-    pdf.addEventListener('click', ()=>{
-        const active = document.querySelector('#capSheetTabs a.active');
-        const sheet = active ? decodeURIComponent(active.getAttribute('data-sheet')) : '{{ CAP_SHEET_NAME }}';
-        window.open('{{ url_for("admin.ai_engine.cap_noncompliant_report_pdf") }}' + '?sheet=' + encodeURIComponent(sheet), '_blank');
+    pdf.addEventListener('click', (ev)=>{
+        ev.preventDefault();
+        window.open('{{ url_for("admin.ai_engine.cap_noncompliant_report_pdf") }}' + '?sheet=' + encodeURIComponent(activeSheet()), '_blank');
     });
-    // remove this listener after wiring
-    document.removeEventListener('click', initReportButtons);
-});
+})();
 </script>
 
 {% endblock %}

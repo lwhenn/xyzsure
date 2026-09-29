@@ -1,0 +1,71 @@
+{% extends 'ai_compliance.base.html' %}
+
+{% block title %}Non-Compliant and Warning Report - {{ sheet }}{% endblock %}
+
+{% block content %}
+<style>
+    .container { max-width: 100%; }
+    .nc-report-table { font-size: 0.85rem; }
+    .nc-report-table td { white-space: pre-wrap; vertical-align: top; }
+    .nc-status-noncompliant { background: #f8d7da !important; font-weight: 600; }
+    .nc-status-warning { background: #fff3cd !important; font-weight: 600; }
+    @media print {
+        body { background: #fff !important; }
+        .no-print { display: none !important; }
+        .card { border: none; box-shadow: none; }
+    }
+</style>
+
+<div class="card my-3">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h2 class="mb-1"><i class="bi bi-exclamation-triangle text-warning"></i> Non-Compliant and Warning Report</h2>
+                <div class="text-muted">Sheet: <strong>{{ sheet }}</strong></div>
+                {% if not error %}
+                <div class="text-muted">{{ rows|length }} item{{ '' if rows|length == 1 else 's' }} found</div>
+                {% endif %}
+            </div>
+            <div class="no-print">
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer"></i> Print</button>
+            </div>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger">Could not generate report: {{ error }}</div>
+        {% elif not rows %}
+        <div class="alert alert-success">No partial or non-compliant rows found.</div>
+        {% else %}
+        {% set ns = namespace(status_idx=-1) %}
+        {% for h in headers %}
+            {% if ns.status_idx == -1 and h and 'status' in (h|string|lower) %}{% set ns.status_idx = loop.index0 %}{% endif %}
+        {% endfor %}
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered table-striped nc-report-table">
+                <thead class="table-light">
+                    <tr>
+                        {% for h in headers %}<th>{{ h or '' }}</th>{% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        {% for h in headers %}
+                        {% set cell = row[loop.index0] if loop.index0 < row|length else '' %}
+                        {% set cls = '' %}
+                        {% if loop.index0 == ns.status_idx %}
+                            {% set s = (cell or '')|string|lower %}
+                            {% if 'non' in s and 'compli' in s or 'fail' in s %}{% set cls = 'nc-status-noncompliant' %}
+                            {% elif s %}{% set cls = 'nc-status-warning' %}{% endif %}
+                        {% endif %}
+                        <td class="{{ cls }}">{{ cell if cell is not none else '' }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
