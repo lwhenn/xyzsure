@@ -24,8 +24,8 @@ ExecStart=/usr/xyz_tools/xyzsure/.venv/bin/gunicorn \
   --preload \
   --bind unix:/usr/xyz_tools/xyzsure/xyzsure.sock \
   -m 007 \
-  --error-logfile /usr/xyz_tools/xyzsure/gunicorn.error.log \
-  --access-logfile /usr/xyz_tools/xyzsure/gunicorn.access.log \
+  --error-logfile /usr/xyz_tools/xyzsure/error.log \
+  --access-logfile /usr/xyz_tools/xyzsure/access.log \
   --capture-output \
   --log-level info \
   wsgi:app
